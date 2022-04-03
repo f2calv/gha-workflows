@@ -13,16 +13,6 @@ on:
         description: Publish preview branch?
         required: true
         default: false
-  push:
-    branches-ignore:
-      - "preview/**"
-    paths-ignore:
-      - ".azure-pipelines/**"
-      - LICENSE
-      - README.md
-  pull_request:
-    branches: [main]
-    types: [opened, synchronize, reopened]
 
 jobs:
   build:
