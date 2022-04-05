@@ -159,6 +159,6 @@ jobs:
     runs-on: windows-latest
     needs: build
     steps:
-      - uses: actions/steps-sonarqube
+      - uses: ./.github/actions/steps-sonarqube
         with:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
