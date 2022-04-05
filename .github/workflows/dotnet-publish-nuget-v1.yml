@@ -74,12 +74,6 @@ jobs:
           echo "::set-output name=FullSemVer::$($GitVersion.FullSemVer)"
         shell: pwsh
 
-      - run: gh release view ${{ steps.gitversion.outputs.SemVer }}
-        shell: bash
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        if: false
-        
       - run: |
           $release = (gh release view ${{ steps.gitversion.outputs.SemVer }} --json id,name) | ConvertFrom-Json
           if ($null -eq $release) {
