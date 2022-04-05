@@ -159,6 +159,7 @@ jobs:
     runs-on: windows-latest
     needs: build
     steps:
-      - uses: ./.github/actions/steps-sonarqube
+      #- uses: ./.github/actions/steps-sonarqube
+      - uses: f2calv/gha-sonarqube@main
         with:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
