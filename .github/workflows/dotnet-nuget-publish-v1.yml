@@ -8,10 +8,12 @@ on:
         description: Build Configuration
         required: true
         default: Release
+      #workflow_call boolean input type is boolean
+      #workflow_dispatch boolean input type is treated like string - because it actually has 3 values true/false/'empty'
       PublishPreview:
-        type: boolean
+        type: string #cannot be boolean see https://github.com/actions/runner/issues/1483
         description: Publish preview branch?
-        required: false #false because we can't pass it in
+        required: true
         default: false
 
 jobs:
@@ -26,8 +28,15 @@ jobs:
       SemVer: ${{ steps.gitversion.outputs.SemVer }}
       FullSemVer: ${{ steps.gitversion.outputs.FullSemVer }}
       BuildConfiguration: ${{ steps.setvars.outputs.BuildConfiguration }}
-
+    env:
+      PublishPreview: ${{ inputs.PublishPreview }}
     steps:
+      - run: |
+          echo 'inputs.PublishPreview = "${{ inputs.PublishPreview }}"'
+          echo 'fromJSON(env.PublishPreview) = "${{ fromJSON(env.PublishPreview) }}"'
+          echo '$PublishPreview = "$PublishPreview"'
+        name: debug PublishPreview
+
       - uses: actions/checkout@v2
         with:
           fetch-depth: 0
@@ -137,7 +146,9 @@ jobs:
          else
            echo "::warning title=NUGET_API_KEY::NUGET_API_KEY is missing from secrets, skipping push to api.nuget.org."
          fi
-        if: github.ref == 'refs/heads/main' || github.event.inputs.PublishPreview == 'true'
+        #if: github.ref == 'refs/heads/main' || github.event.inputs.PublishPreview == 'true'
+        if: github.ref == 'refs/heads/main' || fromJSON(env.PublishPreview)
+        
 
       - name: dotnet push (nuget.pkg.github.com)
         run: |
@@ -147,7 +158,8 @@ jobs:
 
       - name: create release ${{ steps.gitversion.outputs.FullSemVer }}
         uses: softprops/action-gh-release@v1
-        if: github.ref == 'refs/heads/main' || github.event.inputs.PublishPreview == 'true'
+        #if: github.ref == 'refs/heads/main' || github.event.inputs.PublishPreview == 'true'
+        if: github.ref == 'refs/heads/main' || fromJSON(env.PublishPreview)
         with:
           tag_name: ${{ steps.gitversion.outputs.FullSemVer }}
           name: Release ${{ steps.gitversion.outputs.FullSemVer }}
