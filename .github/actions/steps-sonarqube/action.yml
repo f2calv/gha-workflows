@@ -38,14 +38,14 @@ runs:
         dotnet tool update dotnet-sonarscanner --tool-path .\.sonar\scanner
     - name: Build and analyze
       env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # Needed to get PR information, if any
+        GITHUB_TOKEN: ${{ inputs.GITHUB_TOKEN }} # Needed to get PR information, if any
       shell: powershell
       run: |
-        if ("${{ secrets.SONAR_TOKEN }}" -ne "") {
+        if ("${{ inputs.SONAR_TOKEN }}" -ne "") {
           .\.sonar\scanner\dotnet-sonarscanner begin /k:"${{ github.actor }}_${{ github.event.repository.name }}" /o:"${{ github.actor }}" /d:sonar.login="${{ secrets.SONAR_TOKEN }}" /d:sonar.host.url="https://sonarcloud.io"
           dotnet build -c ${{ needs.build.outputs.BuildConfiguration }}
-          .\.sonar\scanner\dotnet-sonarscanner end /d:sonar.login="${{ secrets.SONAR_TOKEN }}"
+          .\.sonar\scanner\dotnet-sonarscanner end /d:sonar.login="${{ inputs.SONAR_TOKEN }}"
         }
         else {
-          Write-Host "::warning title=SONAR_TOKEN::SONAR_TOKEN is missing from secrets, skipping build and analyze."
+          Write-Host "::warning title=SONAR_TOKEN::SONAR_TOKEN is not set, skipping analysis of the build."
         }
