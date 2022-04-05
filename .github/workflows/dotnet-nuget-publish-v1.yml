@@ -31,12 +31,6 @@ jobs:
     env:
       PublishPreview: ${{ inputs.PublishPreview }}
     steps:
-      - run: |
-          echo 'inputs.PublishPreview = "${{ inputs.PublishPreview }}"'
-          echo 'fromJSON(env.PublishPreview) = "${{ fromJSON(env.PublishPreview) }}"'
-          echo '$PublishPreview = "$PublishPreview"'
-        name: debug PublishPreview
-
       - uses: actions/checkout@v2
         with:
           fetch-depth: 0
@@ -146,9 +140,7 @@ jobs:
          else
            echo "::warning title=NUGET_API_KEY::NUGET_API_KEY is missing from secrets, skipping push to api.nuget.org."
          fi
-        #if: github.ref == 'refs/heads/main' || github.event.inputs.PublishPreview == 'true'
-        if: github.ref == 'refs/heads/main' || fromJSON(env.PublishPreview)
-        
+        if: github.ref == 'refs/heads/main' || github.event.inputs.PublishPreview == 'true'
 
       - name: dotnet push (nuget.pkg.github.com)
         run: |
@@ -158,8 +150,7 @@ jobs:
 
       - name: create release ${{ steps.gitversion.outputs.FullSemVer }}
         uses: softprops/action-gh-release@v1
-        #if: github.ref == 'refs/heads/main' || github.event.inputs.PublishPreview == 'true'
-        if: github.ref == 'refs/heads/main' || fromJSON(env.PublishPreview)
+        if: github.ref == 'refs/heads/main' || github.event.inputs.PublishPreview == 'true'
         with:
           tag_name: ${{ steps.gitversion.outputs.FullSemVer }}
           name: Release ${{ steps.gitversion.outputs.FullSemVer }}
