@@ -74,6 +74,19 @@ jobs:
           echo "::set-output name=FullSemVer::$($GitVersion.FullSemVer)"
         shell: pwsh
 
+      - run: gh release list
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        
+      - name: gh release list
+        run: |
+          $releases = (gh release list --json) | ConvertFrom-Json
+          Write-Host "json=$releases"
+        shell: pwsh
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - name: dotnet restore
         run: dotnet restore --verbosity minimal --configfile nuget.config
 
