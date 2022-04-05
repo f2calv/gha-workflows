@@ -178,7 +178,6 @@ jobs:
     runs-on: windows-latest
     needs: build
     steps:
-      #- uses: ./.github/actions/steps-sonarqube
       - uses: f2calv/gha-sonarqube@main
         with:
           BuildConfiguration: ${{ needs.build.outputs.BuildConfiguration }}
