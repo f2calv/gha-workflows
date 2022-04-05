@@ -74,15 +74,19 @@ jobs:
           echo "::set-output name=FullSemVer::$($GitVersion.FullSemVer)"
         shell: pwsh
 
-      - run: gh release list
+      - run: gh release view ${{ steps.gitversion.outputs.SemVer }}
         shell: bash
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         
-      - name: gh release list
-        run: |
-          $releases = (gh release list --json) | ConvertFrom-Json
-          Write-Host "json=$releases"
+      - run: |
+          $release = (gh release view ${{ steps.gitversion.outputs.SemVer }} --json) | ConvertFrom-Json
+          if ($null -eq $release) {
+            Write-Host "not found"
+          }
+          else {
+            Write-Host $release
+          }
         shell: pwsh
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -166,7 +170,7 @@ jobs:
         if: github.ref == 'refs/heads/main' || github.event.inputs.PublishPreview == 'true'
         with:
           tag_name: ${{ steps.gitversion.outputs.FullSemVer }}
-          name: Release ${{ steps.gitversion.outputs.FullSemVer }}
+          name: ${{ steps.gitversion.outputs.FullSemVer }}
 
   SonarQube:
     runs-on: windows-latest
