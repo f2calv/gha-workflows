@@ -78,16 +78,20 @@ jobs:
         shell: bash
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        if: false
         
       - run: |
           $release = (gh release view ${{ steps.gitversion.outputs.SemVer }} --json id,name) | ConvertFrom-Json
           if ($null -eq $release) {
-            Write-Host "not found"
+            Write-Host "Release not found, we are ok to push the new package..."
+            Write-Host "::set-output name=DoPush::true"
           }
           else {
-            Write-Host $release
+            Write-Host "Release already exists, skipping push."
+            Write-Host "::set-output name=DoPush::false"
           }
         shell: pwsh
+        id: check_exists
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -157,17 +161,17 @@ jobs:
          else
            echo "::warning title=NUGET_API_KEY::NUGET_API_KEY is missing from secrets, skipping push to api.nuget.org."
          fi
-        if: github.ref == 'refs/heads/main' || github.event.inputs.PublishPreview == 'true'
+        if: steps.check_exists.outputs.DoPush == 'true' && (github.ref == 'refs/heads/main' || github.event.inputs.PublishPreview == 'true')
 
       - name: dotnet push (nuget.pkg.github.com)
         run: |
           dotnet tool update -g gpr
           gpr push ${{ github.workspace }}/src/**/*.nupkg -k ${{ secrets.GITHUB_TOKEN }}
-        if: github.ref == 'refs/heads/main'
+        if: steps.check_exists.outputs.DoPush == 'true' && (github.ref == 'refs/heads/main' || github.event.inputs.PublishPreview == 'true')
 
       - name: create release ${{ steps.gitversion.outputs.FullSemVer }}
         uses: softprops/action-gh-release@v1
-        if: github.ref == 'refs/heads/main' || github.event.inputs.PublishPreview == 'true'
+        if: steps.check_exists.outputs.DoPush == 'true' && (github.ref == 'refs/heads/main' || github.event.inputs.PublishPreview == 'true')
         with:
           tag_name: ${{ steps.gitversion.outputs.FullSemVer }}
           name: ${{ steps.gitversion.outputs.FullSemVer }}
@@ -179,4 +183,5 @@ jobs:
       #- uses: ./.github/actions/steps-sonarqube
       - uses: f2calv/gha-sonarqube@main
         with:
+          BuildConfiguration: ${{ needs.build.outputs.BuildConfiguration }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
