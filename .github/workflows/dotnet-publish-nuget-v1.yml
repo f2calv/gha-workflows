@@ -25,9 +25,11 @@ jobs:
     # runs-on: ${{matrix.os}}
     runs-on: ubuntu-latest
     outputs:
-      SemVer: ${{ steps.gitversion.outputs.SemVer }}
-      FullSemVer: ${{ steps.gitversion.outputs.FullSemVer }}
-      BuildConfiguration: ${{ steps.setvars.outputs.BuildConfiguration }}
+      # SemVer: ${{ steps.dotnet.outputs.SemVer }}
+      # FullSemVer: ${{ steps.dotnet.outputs.FullSemVer }}
+      BuildConfiguration: ${{ steps.dotnet.outputs.BuildConfiguration }}
+    # env:
+    #   PublishPreview: ${{ inputs.PublishPreview }}
     steps:
       - uses: f2calv/gha-dotnet-nuget@main
         id: dotnet
