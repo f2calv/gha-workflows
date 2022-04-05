@@ -37,9 +37,6 @@ jobs:
           NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
           PublishPreview: ${{ inputs.PublishPreview }}
 
-      - run: echo "FullSemVer=${{ steps.dotnet.outputs.FullSemVer }}"
-        shell: bash
-
   SonarQube:
     runs-on: windows-latest
     needs: build
