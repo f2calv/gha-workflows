@@ -74,8 +74,10 @@ jobs:
           echo "::set-output name=FullSemVer::$($GitVersion.FullSemVer)"
         shell: pwsh
 
-      - run: |
-          gh release list --limit 1
+      - name: gh release view
+        run: |
+          $latest = (gh release list --limit 1)
+          Write-Host "$latest"
           $release = (gh release view ${{ steps.gitversion.outputs.SemVer }} --json id,name) | ConvertFrom-Json
           if ($null -eq $release) {
             Write-Host "Release not found, we are ok to push the new package..."
@@ -87,7 +89,7 @@ jobs:
           }
         shell: pwsh
         id: check_exists
-        continue-on-error: true #Don't like this, but handles 'release not found'
+        continue-on-error: true #Don't like this but it handles 'release not found'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
