@@ -4,7 +4,7 @@ Shared reusable workflow library used by my open-source projects, for more infor
 
 These templates cover a number of common functions, including;
 
-- .NET build/test/publish/pack
+- .NET build/test/pack/nuget push
 - _todo_
 
 ## Other Resources
