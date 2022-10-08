@@ -3,9 +3,15 @@ name: ci
 on:
   workflow_call:
     inputs:
+      #Note: We don't need to pass in GITHUB_TOKEN to a reusable workflow. When a reusable workflow is triggered by a caller workflow, the github context is always associated with the caller workflow. The called workflow is automatically granted access to github.token and secrets.GITHUB_TOKEN.
+      #see https://docs.github.com/en/actions/using-workflows/reusing-workflows
+      NUGET_API_KEY:
+        type: string
+        description: i.e. secrets.NUGET_API_KEY
+        required: false
       BuildConfiguration:
         type: string
-        description: Build Configuration
+        description: i.e. Debug or Release
         required: true
         default: Release
       #workflow_call boolean input type is boolean
@@ -34,9 +40,9 @@ jobs:
       - uses: f2calv/gha-dotnet-nuget@main
         id: dotnet
         with:
-          BuildConfiguration: ${{ github.event.inputs.BuildConfiguration }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
+          NUGET_API_KEY: ${{ inputs.NUGET_API_KEY }}
+          BuildConfiguration: ${{ github.event.inputs.BuildConfiguration }}
           PublishPreview: ${{ inputs.PublishPreview }}
 
   SonarQube:
@@ -46,5 +52,5 @@ jobs:
       - uses: f2calv/gha-sonarqube@main
         with:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_TOKEN: ${{ inputs.SONAR_TOKEN }}
           BuildConfiguration: ${{ needs.build.outputs.BuildConfiguration }}
