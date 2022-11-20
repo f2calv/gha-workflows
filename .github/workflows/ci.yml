@@ -19,6 +19,10 @@ on:
     types: [opened, synchronize, reopened]
 
 jobs:
+  #Note: we could potentially use the gha-release-versioning workflow to version the gha-workflow repository, but this might get confusing!!
+  # ci:
+  #   uses: f2calv/gha-workflows/.github/workflows/gha-release-versioning@v1
+
   release:
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
