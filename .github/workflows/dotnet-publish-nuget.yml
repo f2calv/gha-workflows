@@ -1,4 +1,4 @@
-name: ci
+name: dotnet-publish-nuget
 
 on:
   workflow_call:
