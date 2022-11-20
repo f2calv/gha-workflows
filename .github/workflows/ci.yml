@@ -41,13 +41,11 @@ jobs:
           Write-Host "MajorVer=$($GitVersion.Major)"
           echo "MajorVer=$($GitVersion.Major)" >> $env:GITHUB_OUTPUT
 
-      - id: check-release-exists
-        name: check-release-exists
-        shell: pwsh
-        run: |
-          $ReleaseExists = &"./.scripts/Invoke-CheckReleaseExists.ps1" `
-            -ReleaseName ${{ steps.gitversion.outputs.SemVer }}
-          echo "ReleaseExists=$ReleaseExists" >> $env:GITHUB_OUTPUT
+      - uses: f2calv/gha-check-release-exists@v1
+        id: check-release-exists
+        with:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ReleaseName: ${{ steps.gitversion.outputs.SemVer }}
 
       - name: create release
         uses: softprops/action-gh-release@v1
