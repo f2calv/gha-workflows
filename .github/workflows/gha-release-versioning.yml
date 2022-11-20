@@ -1,4 +1,4 @@
-name: ci
+name: gha-release-versioning
 
 on:
   workflow_call:
@@ -6,7 +6,7 @@ on:
     #see https://docs.github.com/en/actions/using-workflows/reusing-workflows
 
 jobs:
-  release:
+  gha-release-versioning:
     env:
       #Note: GH_TOKEN is automatically picked up by github cli
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
