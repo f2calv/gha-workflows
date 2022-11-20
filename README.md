@@ -1,11 +1,12 @@
 # GitHub Actions Reusable Workflows Repository
 
-Shared reusable workflow library used by my open-source projects, for more information see [Resources in YAML Pipelines](https://docs.github.com/en/actions/using-workflows/reusing-workflows).
+Shared reusable workflow library for more information see [Resources in YAML Pipelines](https://docs.github.com/en/actions/using-workflows/reusing-workflows).
 
-These templates cover a number of common functions, including;
+These workflos cover a number of common scenarios, including;
 
-- .NET build/test/pack/nuget push
-- _todo_
+- [GitHub Actions Release Versioning](.github/workflows/gha-release-versioning.yml)
+- [.NET build/test/pack/nuget push](.github/workflows/dotnet-publish-nuget.yml)
+- _tba_
 
 ## Other Resources
 
