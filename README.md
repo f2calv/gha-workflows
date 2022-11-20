@@ -6,7 +6,7 @@ These workflos cover a number of common scenarios, including;
 
 - [GitHub Actions Release Versioning](.github/workflows/gha-release-versioning.yml)
 - [.NET build/test/pack/nuget push](.github/workflows/dotnet-publish-nuget.yml)
-- _tba_
+- _tba_ ...
 
 ## Other Resources
 
