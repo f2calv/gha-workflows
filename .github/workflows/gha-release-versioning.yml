@@ -2,6 +2,17 @@ name: gha-release-versioning
 
 on:
   workflow_call:
+    inputs:
+      tag-prefix:
+        description: Prefix the semver, i.e. 1.0.1 or v1.0.1
+        required: false
+        type: string
+        default: v
+      move-major-tag:
+        description: Create and/or move major version tag, i.e. when creating v1.0.2 then move v1 tag up from the v1.0.1 commit.
+        required: false
+        type: boolean
+        default: true
     #Note: We don't need to pass in GITHUB_TOKEN to a reusable workflow. When a reusable workflow is triggered by a caller workflow, the github context is always associated with the caller workflow. The called workflow is automatically granted access to github.token and secrets.GITHUB_TOKEN.
     #see https://docs.github.com/en/actions/using-workflows/reusing-workflows
 
@@ -41,15 +52,16 @@ jobs:
           steps.check-release-exists.outputs.ReleaseExists == 'false'
             && (github.ref == format('refs/heads/{0}', github.event.repository.default_branch) || github.event.inputs.PublishPreview == 'true')
         with:
-          tag_name: v${{ steps.gitversion.outputs.FullSemVer }}
+          tag_name: ${{ inputs.tag-prefix }}${{ steps.gitversion.outputs.FullSemVer }}
           name: ${{ steps.gitversion.outputs.FullSemVer }}
 
       - name: git apply/move major tag
         if: |
           steps.check-release-exists.outputs.ReleaseExists == 'false'
             && github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+            && inputs.move-major-tag == 'true'
         run: |
           git config user.name "GitHub Actions Bot"
           git config user.email "<>"
-          git tag -fa v${{ steps.gitversion.outputs.MajorVer }} -m "move v${{ steps.gitversion.outputs.MajorVer }} tag"
+          git tag -fa ${{ inputs.tag-prefix }}${{ steps.gitversion.outputs.MajorVer }} -m "move ${{ inputs.tag-prefix }}${{ steps.gitversion.outputs.MajorVer }} tag"
           git push origin v${{ steps.gitversion.outputs.MajorVer }} --force
