@@ -1,0 +1,38 @@
+name: test
+
+on:
+  workflow_call:
+    inputs:
+      move-major-tag:
+        description: Create and/or move major version tag, i.e. when creating v1.0.2 then move v1 tag up from the v1.0.1 commit.
+        required: false
+        type: boolean
+        default: true
+
+jobs:
+  gha-release-versioning:
+    env:
+      #Note: GH_TOKEN is automatically picked up by github cli
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    runs-on: ubuntu-latest
+    steps:
+
+      - name: test1
+        if: github.event.inputs.move-major-tag == true
+        run: |
+          echo 'hello world'
+
+      - name: test2
+        if: github.event.inputs.move-major-tag == 'true'
+        run: |
+          echo 'hello world'
+
+      - name: test3
+        if: inputs.move-major-tag == true
+        run: |
+          echo 'hello world'
+
+      - name: test4
+        if: inputs.move-major-tag == 'true'
+        run: |
+          echo 'hello world'
