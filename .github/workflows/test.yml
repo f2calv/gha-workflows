@@ -1,6 +1,7 @@
 name: test
 
 on:
+  workflow_dispatch:
   workflow_call:
     inputs:
       move-major-tag:
@@ -27,6 +28,7 @@ jobs:
         run: |
           echo 'hello world'
 
+      #works!
       - name: test3
         if: inputs.move-major-tag == true
         run: |
@@ -34,5 +36,16 @@ jobs:
 
       - name: test4
         if: inputs.move-major-tag == 'true'
+        run: |
+          echo 'hello world'
+  
+      - name: test5
+        if: ${{ github.event.inputs.move-major-tag }}
+        run: |
+          echo 'hello world'
+  
+      #works!
+      - name: test6
+        if: ${{ inputs.move-major-tag }}
         run: |
           echo 'hello world'
