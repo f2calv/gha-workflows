@@ -28,6 +28,7 @@ jobs:
         run: |
           echo 'hello world'
 
+      #works!
       - name: test3
         if: inputs.move-major-tag == true
         run: |
@@ -43,6 +44,7 @@ jobs:
         run: |
           echo 'hello world'
   
+      #works!
       - name: test6
         if: ${{ inputs.move-major-tag }}
         run: |
