@@ -32,24 +32,23 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: gitversion
-        shell: pwsh
+      - name: gitversion (1 of 2)
+        uses: gittools/actions/gitversion/setup@v0
+        with:
+          versionSpec: 5.x
+
+      - name: gitversion (2 of 2)
         id: gitversion
-        run: |
-          dotnet tool update -g GitVersion.Tool
-          $GitVersion = dotnet-gitversion ${{ github.workspace }} /nofetch | ConvertFrom-Json
-          Write-Host "SemVer=$($GitVersion.SemVer)"
-          echo "SemVer=$($GitVersion.SemVer)" >> $env:GITHUB_OUTPUT
-          Write-Host "FullSemVer=$($GitVersion.FullSemVer)"
-          echo "FullSemVer=$($GitVersion.FullSemVer)" >> $env:GITHUB_OUTPUT
-          Write-Host "MajorVer=$($GitVersion.Major)"
-          echo "MajorVer=$($GitVersion.Major)" >> $env:GITHUB_OUTPUT
+        uses: gittools/actions/gitversion/execute@v0
+        with:
+          useConfigFile: true
+          additionalArguments: /nofetch
 
       - uses: f2calv/gha-check-release-exists@v1
         id: check-release-exists
         with:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          ReleaseName: ${{ steps.gitversion.outputs.SemVer }}
+          ReleaseName: ${{ steps.gitversion.outputs.semVer }}
 
       - name: create release
         uses: softprops/action-gh-release@v1
@@ -57,8 +56,8 @@ jobs:
           steps.check-release-exists.outputs.ReleaseExists == 'false'
             && (github.ref == format('refs/heads/{0}', github.event.repository.default_branch) || github.event.inputs.PublishPreview == 'true')
         with:
-          tag_name: v${{ steps.gitversion.outputs.FullSemVer }}
-          name: ${{ steps.gitversion.outputs.FullSemVer }}
+          tag_name: v${{ steps.gitversion.outputs.fullSemVer }}
+          name: ${{ steps.gitversion.outputs.fullSemVer }}
 
       - name: git apply/move major tag
         if: |
@@ -67,5 +66,5 @@ jobs:
         run: |
           git config user.name "GitHub Actions Bot"
           git config user.email "<>"
-          git tag -fa v${{ steps.gitversion.outputs.MajorVer }} -m "move v${{ steps.gitversion.outputs.MajorVer }} tag"
-          git push origin v${{ steps.gitversion.outputs.MajorVer }} --force
+          git tag -fa v${{ steps.gitversion.outputs.majorVer }} -m "move v${{ steps.gitversion.outputs.majorVer }} tag"
+          git push origin v${{ steps.gitversion.outputs.majorVer }} --force
