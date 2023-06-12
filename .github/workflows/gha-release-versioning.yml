@@ -44,7 +44,7 @@ jobs:
         id: check-release-exists
         with:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          ReleaseName: ${{ steps.gitversion.outputs.semVer }}
+          ReleaseName: ${{ inputs.tag-prefix }}${{ steps.gitversion.outputs.semVer }}
 
       - name: create release
         uses: softprops/action-gh-release@v1
