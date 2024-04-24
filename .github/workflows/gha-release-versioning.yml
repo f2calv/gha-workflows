@@ -24,18 +24,18 @@ jobs:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
       - name: gitversion (1 of 2)
-        uses: gittools/actions/gitversion/setup@v0
+        uses: gittools/actions/gitversion/setup@v1
         with:
           versionSpec: 5.x
 
       - name: gitversion (2 of 2)
         id: gitversion
-        uses: gittools/actions/gitversion/execute@v0
+        uses: gittools/actions/gitversion/execute@v1
         with:
           useConfigFile: true
           additionalArguments: /nofetch
@@ -47,7 +47,7 @@ jobs:
           ReleaseName: ${{ steps.gitversion.outputs.semVer }}
 
       - name: create release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         if: |
           steps.check-release-exists.outputs.ReleaseExists == 'false'
             && (github.ref == format('refs/heads/{0}', github.event.repository.default_branch))
