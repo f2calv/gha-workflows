@@ -46,6 +46,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           ReleaseName: ${{ steps.gitversion.outputs.semVer }}
 
+          
       - run: |
           echo 'major=${{ steps.gitversion.outputs.major }}'
           echo 'major=${{ steps.gitversion.outputs.majorVer }}'
