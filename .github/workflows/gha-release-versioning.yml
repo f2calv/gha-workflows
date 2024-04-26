@@ -63,5 +63,5 @@ jobs:
         run: |
           git config user.name "GitHub Actions Bot"
           git config user.email "<>"
-          git tag -fa ${{ inputs.tag-prefix }}${{ steps.gitversion.outputs.majorVer }} -m "move ${{ inputs.tag-prefix }}${{ steps.gitversion.outputs.majorVer }} tag"
-          git push origin v${{ steps.gitversion.outputs.majorVer }} --force
+          git tag -fa ${{ inputs.tag-prefix }}${{ steps.gitversion.outputs.major }} -m "move ${{ inputs.tag-prefix }}${{ steps.gitversion.outputs.major }} tag"
+          git push origin v${{ steps.gitversion.outputs.major }} --force
