@@ -21,4 +21,4 @@ on:
 
 jobs:
   release:
-    uses: f2calv/gha-workflows/.github/workflows/gha-release-versioning.yml@v1
+    uses: ./.github/workflows/gha-release-versioning.yml
