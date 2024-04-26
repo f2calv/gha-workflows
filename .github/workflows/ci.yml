@@ -1,4 +1,4 @@
-name: gha
+name: ci
 
 on:
   workflow_dispatch:
