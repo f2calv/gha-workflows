@@ -12,9 +12,6 @@ on:
 
 jobs:
   gha-release-versioning:
-    env:
-      #Note: GH_TOKEN is automatically picked up by github cli
-      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     runs-on: ubuntu-latest
     steps:
 
