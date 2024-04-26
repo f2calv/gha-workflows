@@ -27,5 +27,6 @@ jobs:
 
       - uses: f2calv/gha-release-versioning@main
         with:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           tag-prefix: ${{ inputs.tag-prefix }}
           move-major-tag: ${{ inputs.move-major-tag }}
