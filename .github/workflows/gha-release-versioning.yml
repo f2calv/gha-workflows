@@ -25,7 +25,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - uses: f2calv/ggha-release-versioning@main
+      - uses: f2calv/gha-release-versioning@main
         with:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          ReleaseName: ${{ steps.gitversion.outputs.semVer }}
+          tag-prefix: ${{ inputs.tag-prefix }}
+          move-major-tag: ${{ inputs.move-major-tag }}
