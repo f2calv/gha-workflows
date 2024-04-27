@@ -44,8 +44,8 @@ jobs:
   gha-release-versioning:
     runs-on: ubuntu-latest
     outputs:
-      output1: ${{ steps.gha-release-versioning.outputs.semVer }}
-      output2: ${{ steps.gha-release-versioning.outputs.fullSemVer }}
+      semVer: ${{ steps.gha-release-versioning.outputs.semVer }}
+      fullSemVer: ${{ steps.gha-release-versioning.outputs.fullSemVer }}
     steps:
       - uses: actions/checkout@v4
         with:
