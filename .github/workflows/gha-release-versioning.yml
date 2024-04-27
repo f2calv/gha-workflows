@@ -31,6 +31,13 @@ on:
         required: false
         type: boolean
         default: true
+    outputs:
+      semVer:
+        description: i.e. 1.2.3
+        value: ${{ jobs.gha-release-versioning.outputs.semVer }}
+      fullSemVer:
+        description: i.e. 1.2.3-feature-my-feature.12
+        value: ${{ jobs.gha-release-versioning.outputs.fullSemVer }}
 
 
 jobs:
