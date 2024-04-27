@@ -26,7 +26,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - uses: f2calv/gha-release-versioning@main
+      - uses: f2calv/gha-release-versioning@v1
         with:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           tag-prefix: ${{ inputs.tag-prefix }}
