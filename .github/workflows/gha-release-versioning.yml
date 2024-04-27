@@ -5,6 +5,17 @@ on:
   workflow_dispatch:
   workflow_call:
     inputs:
+      # GITHUB_TOKEN:
+      #   description: i.e. secrets.GITHUB_TOKEN
+      #   required: true
+      #   type: string
+      #Note: We don't need to pass in GITHUB_TOKEN to a reusable workflow. When a reusable workflow is triggered by a caller workflow, the github context is always associated with the caller workflow. The called workflow is automatically granted access to github.token and secrets.GITHUB_TOKEN.
+      #see https://docs.github.com/en/actions/using-workflows/reusing-workflows
+      semVer:
+        description: Pass in an externally generated semantic version, if empty then uses GitVersion.
+        required: false
+        type: string
+        default: ''
       tag-prefix:
         description: Prefix the semver, i.e. 1.0.1 or v1.0.1
         required: false
@@ -15,8 +26,12 @@ on:
         required: false
         type: boolean
         default: true
-    #Note: We don't need to pass in GITHUB_TOKEN to a reusable workflow. When a reusable workflow is triggered by a caller workflow, the github context is always associated with the caller workflow. The called workflow is automatically granted access to github.token and secrets.GITHUB_TOKEN.
-    #see https://docs.github.com/en/actions/using-workflows/reusing-workflows
+      tag-and-release:
+        description: Sets a Git tag and creates a corresponding release.
+        required: false
+        type: boolean
+        default: true
+
 
 jobs:
   gha-release-versioning:
@@ -29,5 +44,7 @@ jobs:
       - uses: f2calv/gha-release-versioning@v1
         with:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          semVer: ${{ inputs.semVer }}
           tag-prefix: ${{ inputs.tag-prefix }}
           move-major-tag: ${{ inputs.move-major-tag }}
+          tag-and-release: ${{ inputs.tag-and-release }}
