@@ -43,12 +43,16 @@ on:
 jobs:
   gha-release-versioning:
     runs-on: ubuntu-latest
+    outputs:
+      semVer: ${{ steps.gha-release-versioning.outputs.semVer }}
+      fullSemVer: ${{ steps.gha-release-versioning.outputs.fullSemVer }}
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
       - uses: f2calv/gha-release-versioning@v1
+        id: gha-release-versioning
         with:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           semVer: ${{ inputs.semVer }}
