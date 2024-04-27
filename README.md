@@ -2,7 +2,7 @@
 
 Shared reusable workflow library for more information see [Resources in YAML Pipelines](https://docs.github.com/en/actions/using-workflows/reusing-workflows).
 
-These workflos cover a number of common scenarios, including;
+These workflows cover a number of common scenarios, including;
 
 - [GitHub Actions Release Versioning](.github/workflows/gha-release-versioning.yml)
 - [.NET build/test/pack/nuget push](.github/workflows/dotnet-publish-nuget.yml)

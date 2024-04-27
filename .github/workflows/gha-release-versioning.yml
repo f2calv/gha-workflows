@@ -1,7 +1,8 @@
 name: gha-release-versioning
-#Note: Workflow is called by other workflows to a) determine a semantic version, b) tag the repo with this create a semantic version version and c) create a release.
+#Note: Workflow is called by other workflows to a) determine a semantic version, b) tag the repo with this create a semantic version and c) create a release.
 
 on:
+  workflow_dispatch:
   workflow_call:
     inputs:
       tag-prefix:
@@ -19,57 +20,14 @@ on:
 
 jobs:
   gha-release-versioning:
-    env:
-      #Note: GH_TOKEN is automatically picked up by github cli
-      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: gitversion (1 of 2)
-        uses: gittools/actions/gitversion/setup@v1
-        with:
-          versionSpec: 5.x
-
-      - name: gitversion (2 of 2)
-        id: gitversion
-        uses: gittools/actions/gitversion/execute@v1
-        with:
-          useConfigFile: true
-          additionalArguments: /nofetch
-
-      - uses: f2calv/gha-check-release-exists@v2
-        id: check-release-exists
+      - uses: f2calv/gha-release-versioning@v1
         with:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          ReleaseName: ${{ steps.gitversion.outputs.semVer }}
-
-      - name: create release
-        uses: softprops/action-gh-release@v2
-        if: |
-          steps.check-release-exists.outputs.ReleaseExists == 'false'
-            && (github.ref == format('refs/heads/{0}', github.event.repository.default_branch))
-        with:
-          tag_name: ${{ inputs.tag-prefix }}${{ steps.gitversion.outputs.fullSemVer }}
-          name: ${{ steps.gitversion.outputs.fullSemVer }}
-
-      - name: git apply/move major tag
-        if: |
-          steps.check-release-exists.outputs.ReleaseExists == 'false'
-            && github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
-            && inputs.move-major-tag == true
-        run: |
-          git config user.name "GitHub Actions Bot"
-          git config user.email "<>"
-
-          TAG=${{ inputs.tag-prefix }}${{ steps.gitversion.outputs.major }}
-          echo "TAG=$TAG"
-          git tag -fa $TAG -m "move $TAG tag"
-          git push origin $TAG --force
-
-          TAG=${{ inputs.tag-prefix }}${{ steps.gitversion.outputs.major }}.${{ steps.gitversion.outputs.minor }}
-          echo "TAG=$TAG"
-          git tag -fa $TAG -m "move $TAG tag"
-          git push origin $TAG --force
+          tag-prefix: ${{ inputs.tag-prefix }}
+          move-major-tag: ${{ inputs.move-major-tag }}
