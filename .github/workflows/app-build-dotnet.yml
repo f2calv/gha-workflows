@@ -1,0 +1,32 @@
+name: app-build-dotnet
+
+on:
+  workflow_call:
+    inputs:
+      fullSemVer:
+        type: string
+        description: e.g. 1.2.3-feature-my-feature.12
+        required: true
+      configuration:
+        type: string
+        description: e.g. Debug or Release
+        default: Release
+      solutionName:
+        type: string
+        description: e.g. MySolution.sln or MyProject.csproj
+        default: ''
+
+jobs:
+  build-app:
+    runs-on: ubuntu-latest
+    #if: github.actor != 'depbot'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: dotnet restore
+        run: dotnet restore ${{ inputs.solutionName }} --verbosity minimal --configfile NuGet.config
+
+      - name: dotnet build
+        run: dotnet build ${{ inputs.solutionName }} -c ${{ inputs.configuration }} --nologo --no-restore -p:Version='${{ inputs.fullSemVer }}' -p:SourceRevisionId=${{ github.sha }}
+
+      #TODO: could run dotnet test here, etc...
