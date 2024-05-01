@@ -52,6 +52,7 @@ jobs:
 
       - uses: actions/checkout@v4
         with:
+          ref: ${{ github.ref_name }}
           path: workflows #Note: needed to access nested local action
 
       - uses: ./workflows/.github/actions/gitops-manifest-update
