@@ -45,7 +45,6 @@ runs:
 
     - name: setup yq (1 of 3)
       shell: bash
-      if: inputs.semVer == ''
       run: |
         FILE=${{ inputs.devcontainer-path }}
         if [[ -f "$FILE" ]]; then
@@ -90,6 +89,7 @@ runs:
         #TODO: check the YAML file has actually changed, if it hasn't then dont run the next step
 
     - name: repo update
+      shell: bash
       run: |
         git config --global user.email "${{ inputs.git-user-name }}"
         git config --global user.name "${{ inputs.git-user-email }}"
