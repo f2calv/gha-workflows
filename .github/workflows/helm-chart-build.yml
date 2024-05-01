@@ -3,9 +3,13 @@ name: helm-chart-build
 on:
   workflow_call:
     inputs:
-      semVer:
+      registry:
         type: string
-        description: e.g. 1.2.3-feature-my-feature.12
+        description: e.g. ghcr.io, docker.io, xyz.azurecr.io
+        default: ghcr.io
+      tag:
+        type: string
+        description: e.g. latest, latest-dev, 1.2.3
         required: true
 
 jobs:
@@ -14,31 +18,32 @@ jobs:
     permissions:
       packages: write #for pushing helm package
     env:
-      REGISTRY: ghcr.io
+      REGISTRY: ${{ inputs.registry }}
       #CHART_REPOSITORY: Note: set dynamically, i.e. github.repository_owner/charts/IMAGE_NAME
-      GIT_TAG: ${{ inputs.semVer }}
+      TAG: ${{ inputs.tag }}
     steps:
       - uses: actions/checkout@v4
 
-      - name: set vars (1 of 3)
+      - name: set vars (1 of 2)
         run: |
           IMAGE_NAME=$(echo $REPOSITORY | sed "s|$USERNAME\/||g")
           echo "IMAGE_NAME=$IMAGE_NAME" >> $GITHUB_ENV
 
-      - name: set vars (2 of 3)
+      - name: set vars (2 of 2)
         run: echo "CHART_REPOSITORY=${{ github.repository_owner }}/charts/$IMAGE_NAME" >> $GITHUB_ENV
 
-      - name: set vars (3 of 3) #pulls helm version from devcontainer
+      - name: setup helm (1 of 2) #pulls version from devcontainer
         run: |
           npm install --global json5
           json5 -c .devcontainer/devcontainer.json
-          HELM_VERSION_TO_INSTALL=$(cat .devcontainer/devcontainer.json | jq -r '.features[] | select(.helm | . != null).helm')
-          echo "HELM_VERSION_TO_INSTALL=$HELM_VERSION_TO_INSTALL" >> $GITHUB_ENV
-          echo $HELM_VERSION_TO_INSTALL
+          VERSION_TO_INSTALL=$(cat .devcontainer/devcontainer.json | jq -r '.features[] | select(.helm | . != null).helm')
+          echo "VERSION_TO_INSTALL=$VERSION_TO_INSTALL" >> $GITHUB_ENV
+          echo "VERSION_TO_INSTALL=$VERSION_TO_INSTALL"
 
-      - uses: azure/setup-helm@v4
+      - name: setup helm (2 of 2)
+        uses: azure/setup-helm@v4
         with:
-          version: ${{ env.HELM_VERSION_TO_INSTALL }}
+          version: ${{ env.VERSION_TO_INSTALL }}
 
       - name: helm registry login
         run: |
@@ -77,7 +82,7 @@ jobs:
 
       - name: helm package
         run: |
-          helm package ${{ github.workspace }}/charts/$IMAGE_NAME/ --destination ${{ github.workspace }}/artifacts/ --app-version ${{ env.GIT_TAG }}
+          helm package ${{ github.workspace }}/charts/$IMAGE_NAME/ --destination ${{ github.workspace }}/artifacts/ --app-version ${{ env.TAG }}
         if: false #not implemented/working yet
 
       - name: helm push
