@@ -50,15 +50,12 @@ jobs:
           repository: ${{ inputs.gitops-repository }}
           token: ${{ secrets.gitops-repository-token }}
 
+      #Note: for a reusable workflow to gain access to a local action we need to perform an additional checkout
       - uses: actions/checkout@v4
         with:
-          repository: f2calv/gha-workflows
-          ref: ${{ github.ref_name }}
-          path: workflows #Note: needed to access nested local action
-      
-      - run: |
-          cd workflows
-          ls -lsa
+          repository: f2calv/gha-workflows #Note: this repo name
+          ref: ${{ github.ref_name }} #Note: assumes that the rwf repo has an identical branch name to the calling branch
+          path: workflows
 
       - uses: ./workflows/.github/actions/gitops-manifest-update
         with:
