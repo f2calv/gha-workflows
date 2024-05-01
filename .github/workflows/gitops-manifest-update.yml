@@ -54,6 +54,10 @@ jobs:
         with:
           ref: ${{ github.ref_name }}
           path: workflows #Note: needed to access nested local action
+      
+      - run: |
+          cd workflows
+          ls -lsa
 
       - uses: ./workflows/.github/actions/gitops-manifest-update
         with:
