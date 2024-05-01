@@ -50,7 +50,11 @@ jobs:
           repository: ${{ inputs.gitops-repository }}
           token: ${{ secrets.gitops-repository-token }}
 
-      - uses: ./.github/actions/gitops-manifest-update
+      - uses: actions/checkout@v4
+        with:
+          path: workflows #Note: needed to access nested local action
+
+      - uses: ./workflows/.github/actions/gitops-manifest-update
         with:
           registry: ${{ inputs.registry }}
           repository: ${{ inputs.repository }}
