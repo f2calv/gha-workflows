@@ -1,0 +1,61 @@
+name: gitops-manifest-update
+
+on:
+  workflow_call:
+    inputs:
+      registry:
+        type: string
+        description: e.g. ghcr.io, docker.io, xyz.azurecr.io
+        required: true
+      repository:
+        type: string
+        description: e.g. my-image-name
+        required: true
+      tag:
+        type: string
+        description: e.g. latest, latest-dev, 1.2.3
+        required: true
+      gitops-repository:
+        type: string
+        description: e.g. f2calv/PROJECT_K8S
+        default: ${{ github.repository }}
+      yaml-deployment-path:
+        type: string
+        description: e.g. src/workloads/mydeployment.yaml
+        required: true
+      fullSemVer:
+        type: string
+        description: e.g. 1.2.3-feature-my-feature.12
+        required: true
+      git-user-name:
+        type: string
+        description: e.g. Tom Cruise
+        required: true
+      git-user-email:
+        type: string
+        description: e.g. tom@topgun.com
+        required: true
+    secrets:
+      gitops-repository-token:
+        description: Git repository authentication token.
+        required: true
+
+jobs:
+  gitops-manifest-update:
+    runs-on: ubuntu-latest
+    if: github.actor != 'depbot'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: ${{ inputs.gitops-repository }}
+          token: ${{ secrets.gitops-repository-token }}
+
+      - uses: ./.github/actions/gitops-manifest-update
+        with:
+          registry: ${{ inputs.registry }}
+          repository: ${{ inputs.repository }}
+          tag: ${{ inputs.tag }}
+          yaml-deployment-path: ${{ inputs.yaml-deployment-path }}
+          fullSemVer: ${{ inputs.fullSemVer }}
+          git-user-name: ${{ inputs.git-user-name }}
+          git-user-email: ${{ inputs.git-user-email }}
