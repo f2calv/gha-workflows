@@ -89,7 +89,7 @@ jobs:
           printf "\nhelm package...\n"
           helm package $CHART_PATH --destination ${{ github.workspace }}/artifacts/ --app-version ${{ inputs.tag }}
     
-          if [ "${{ inputs.is-library-chart }}" == "true" ]; then
+          if [ "${{ inputs.is-library-chart }}" == "false" ]; then
             #https://helm.sh/docs/helm/helm_template/
             printf "\nhelm template...\n"
             helm template $CHART_NAME $CHART_PATH \
