@@ -110,7 +110,7 @@ jobs:
           printf "\nsuccess!"
         
       - name: helm push
-        #if: github.ref == 'refs/heads/main'
+        if: github.ref == 'refs/heads/main'
         run: |
           echo "CHART_NAME=$CHART_NAME"
           echo "CHART_PATH=$CHART_PATH"
