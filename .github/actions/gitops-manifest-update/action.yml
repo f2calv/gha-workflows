@@ -53,7 +53,7 @@ runs:
           echo "::error file=${{ inputs.devcontainer-path }}::yq version is managed by the devcontainer.json, '$FILE' is therefore required!"
         fi
 
-    - name: setup yq (2 of 3) #pulls version from devcontainer
+    - name: setup yq (2 of 3) #pull version from devcontainer.json
       shell: bash
       run: |
         npm install --global json5
