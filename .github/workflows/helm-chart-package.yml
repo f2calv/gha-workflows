@@ -1,4 +1,4 @@
-name: helm-chart-build
+name: helm-chart-package
 
 on:
   workflow_call:
@@ -20,7 +20,7 @@ on:
         description: If unset we use the name of the current Git repository.
       is-library-chart:
         type: boolean
-        description: Is the chart a library chart?
+        description: Is the helm chart a library chart?
         default: false
 
 jobs:
