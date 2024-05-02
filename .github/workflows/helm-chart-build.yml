@@ -18,6 +18,10 @@ on:
       chart-name:
         type: string
         description: If unset we use the name of the current Git repository.
+      is-library-chart:
+        type: boolean
+        description: Is the chart a library chart?
+        default: false
 
 jobs:
   build-chart:
@@ -52,6 +56,9 @@ jobs:
 
       - name: helm registry login
         run: |
+          echo $CHART_NAME
+          echo $CHART_PATH
+
           printf "\nhelm version...\n"
           helm version
 
@@ -61,7 +68,9 @@ jobs:
 
           printf "\nUpdate the version+appVersion of the Chart.yaml before packaging...\n"
           yq -i '.version = "${{ inputs.tag }}"' $CHART_PATH/Chart.yaml
-          yq -i '.appVersion = "${{ inputs.tag }}"' $CHART_PATH/Chart.yaml
+          if [ "${{ inputs.is-library-chart }}" == "false" ]; then
+            yq -i '.appVersion = "${{ inputs.tag }}"' $CHART_PATH/Chart.yaml
+          fi
           cat $CHART_PATH/Chart.yaml
 
           #https://helm.sh/docs/helm/helm_dependency_update/
@@ -80,21 +89,23 @@ jobs:
           printf "\nhelm package...\n"
           helm package $CHART_PATH --destination ${{ github.workspace }}/artifacts/ --app-version ${{ inputs.tag }}
     
-          #https://helm.sh/docs/helm/helm_template/
-          printf "\nhelm template...\n"
-          helm template $CHART_NAME $CHART_PATH \
-              --version "${{ inputs.tag }}" \
-              --set image.tag="${{ inputs.tag }}" \
-              --set image.repository=$CHART_NAME \
-              --set image.registry="${{ inputs.registry }}" \
-              --set run_id="${{ github.run_id }}" \
-              --set run_number="${{ github.run_number }}" \
-              --set workflow="${{ github.workflow }}" \
-              --set branch="${{ github.ref }}" \
-              --set commit="${{ github.sha }}" \
-              --set repo="${{ github.repository }}" \
-              > ${{ github.workspace }}/artifacts/$CHART_NAME.yaml
-          cat ${{ github.workspace }}/artifacts/$CHART_NAME.yaml
+          if [ "${{ inputs.is-library-chart }}" == "true" ]; then
+            #https://helm.sh/docs/helm/helm_template/
+            printf "\nhelm template...\n"
+            helm template $CHART_NAME $CHART_PATH \
+                --version "${{ inputs.tag }}" \
+                --set image.tag="${{ inputs.tag }}" \
+                --set image.repository=$CHART_NAME \
+                --set image.registry="${{ inputs.registry }}" \
+                --set run_id="${{ github.run_id }}" \
+                --set run_number="${{ github.run_number }}" \
+                --set workflow="${{ github.workflow }}" \
+                --set branch="${{ github.ref }}" \
+                --set commit="${{ github.sha }}" \
+                --set repo="${{ github.repository }}" \
+                > ${{ github.workspace }}/artifacts/$CHART_NAME.yaml
+            cat ${{ github.workspace }}/artifacts/$CHART_NAME.yaml
+          fi
 
           printf "\nhelm push...\n"
           #https://helm.sh/docs/helm/helm_push/
