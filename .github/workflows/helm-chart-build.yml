@@ -11,9 +11,13 @@ on:
         type: string
         description: e.g. latest, latest-dev, 1.2.3
         required: true
+      chart-path:
+        type: string
+        description: Relative path to the charts folder in the Git repository.
+        default: ./charts
       chart-name:
         type: string
-        description: If not set uses the name of the current repository
+        description: If unset we use the name of the current Git repository.
 
 jobs:
   build-chart:
@@ -21,20 +25,18 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: set chart-name (1 of 2)
-        if: inputs.chart-name == ''
+      - name: set CHART_PATH
         run: |
-          CHART_NAME=$(echo $REPOSITORY | sed "s|$USERNAME\/||g")
-          echo "CHART_NAME=charts/$CHART_NAME" >> $GITHUB_ENV
+          if [ ! -z "${{ inputs.chart-name }}" ]; then
+            CHART_NAME=$(echo ${{ github.repository }} | sed "s|$USERNAME\/||g")
+            echo "CHART_NAME=$CHART_NAME" >> $GITHUB_ENV
+            echo "CHART_PATH=${{ inputs.chart-path }}/$CHART_NAME" >> $GITHUB_ENV
+          else
+            echo "CHART_NAME=${{ inputs.chart-name }}" >> $GITHUB_ENV
+            echo "CHART_PATH=${{ inputs.chart-path }}/$CHART_NAME" >> $GITHUB_ENV
+          fi
 
-      - name: set chart-name (2 of 2)
-        if: inputs.chart-name != ''
-        run: echo "CHART_NAME=charts/${{ inputs.chart-name }}" >> $GITHUB_ENV
-
-      - name: set CHART_REPOSITORY
-        run: echo "CHART_REPOSITORY=${{ github.repository_owner }}/$CHART_NAME" >> $GITHUB_ENV
-
-      - name: setup helm (1 of 2) #pulls version from devcontainer
+      - name: setup helm (1 of 2) #pull version from devcontainer.json
         run: |
           npm install --global json5
           json5 -c .devcontainer/devcontainer.json
@@ -49,43 +51,78 @@ jobs:
 
       - name: helm registry login
         run: |
-          echo ${{ secrets.GITHUB_TOKEN }} | helm registry login ${{ inputs.registry }}/${{ github.repository_owner }} --username ${{ github.repository_owner }} --password-stdin
+          printf "\nhelm version...\n"
+          helm version
 
-      - uses: actions/setup-python@v5
-        with:
-          python-version: 3.7
-        if: false #not implemented/working yet
+          printf "\nhelm registry login...\n"
+          printf ${{ secrets.GITHUB_TOKEN }} | helm registry login ${{ inputs.registry }}/${{ github.repository_owner }} --username ${{ github.repository_owner }} --password-stdin
+          #printf $servicePrincipalKey | helm registry login ${{ inputs.registry }} --username $servicePrincipalId --password-stdin
 
-      - name: chart-testing (setup)
-        uses: helm/chart-testing-action@v2
-        if: false #not implemented/working yet
+          printf "\nUpdate the version+appVersion of the Chart.yaml before packaging...\n"
+          yq -i '.version = "${{ inputs.tag }}"' $CHART_PATH/Chart.yaml
+          yq -i '.appVersion = "${{ inputs.tag }}"' $CHART_PATH/Chart.yaml
+          cat $CHART_PATH/Chart.yaml
 
-      - name: chart-testing (run list-changed)
-        id: list-changed
-        run: |
-          changed=$(ct list-changed --target-branch main)
-          if [[ -n "$changed" ]]; then
-            echo "changed=true" >> $GITHUB_OUTPUT
-          fi
-        if: false #not implemented/working yet
+          #https://helm.sh/docs/helm/helm_dependency_update/
+          printf "\nhelm dependency update...\n"
+          helm dependency update $CHART_PATH
+    
+          #https://helm.sh/docs/helm/helm_dependency_list/
+          printf "\nhelm dependency list...\n"
+          helm dependency list $CHART_PATH
+    
+          #https://helm.sh/docs/helm/helm_lint/
+          printf "\nhelm lint...\n"
+          helm lint $CHART_PATH
 
-      - name: chart-testing (run lint)
-        run: ct lint
-        if: false #not implemented/working yet
+          #https://helm.sh/docs/helm/helm_package/
+          printf "\nhelm package...\n"
+          helm package $CHART_PATH --destination ${{ github.workspace }}/artifacts/ --app-version ${{ inputs.tag }}
+    
+          #https://helm.sh/docs/helm/helm_template/
+          printf "\nhelm template...\n"
+          helm template $CHART_NAME $CHART_PATH \
+              --version "${{ inputs.tag }}" \
+              --set image.tag="${{ inputs.tag }}" \
+              --set image.repository=$CHART_NAME \
+              --set image.registry="${{ inputs.registry }}" \
+              --set run_id="${{ github.run_id }}" \
+              --set run_number="${{ github.run_number }}" \
+              --set workflow="${{ github.workflow }}" \
+              --set branch="${{ github.ref }}" \
+              --set commit="${{ github.sha }}" \
+              --set repo="${{ github.repository }}" \
+              > ${{ github.workspace }}/artifacts/$CHART_NAME.yaml
+          cat ${{ github.workspace }}/artifacts/$CHART_NAME.yaml
 
-      - name: create kind cluster
-        uses: helm/kind-action@v1
-        #if: steps.list-changed.outputs.changed == 'true'
-        if: false #not implemented/working yet
+          printf "\nhelm push...\n"
+          #https://helm.sh/docs/helm/helm_push/
+          helm push ${{ github.workspace }}/artifacts/$CHART_NAME-${{ inputs.tag }}.tgz oci://${{ inputs.registry }}/${{ github.repository_owner }}
+          #helm push ${{ github.workspace }}/artifacts/$CHART_NAME-${{ inputs.tag }}.tgz oci://${{ inputs.registry }}/charts
 
-      - name: chart-testing (run install)
-        run: ct install
-        if: false #not implemented/working yet
+          printf "\nsuccess!"
 
-      - name: helm package
-        run: |
-          helm package ${{ github.workspace }}/$CHART_NAME/ --destination ${{ github.workspace }}/artifacts/ --app-version ${{ inputs.tag }}
+      # - uses: actions/setup-python@v5
+      #   with:
+      #     python-version: 3.7
 
-      - name: helm push
-        run: |
-          helm push ${{ github.workspace }}/artifacts/$CHART_NAME-${{ inputs.tag }}.tgz oci://ghcr.io/${{ github.repository_owner }}
+      # - name: chart-testing (setup)
+      #   uses: helm/chart-testing-action@v2
+
+      # - name: chart-testing (run list-changed)
+      #   id: list-changed
+      #   run: |
+      #     changed=$(ct list-changed --target-branch main)
+      #     if [[ -n "$changed" ]]; then
+      #       echo "changed=true" >> $GITHUB_OUTPUT
+      #     fi
+
+      # - name: chart-testing (run lint)
+      #   run: ct lint
+
+      # - name: create kind cluster
+      #   uses: helm/kind-action@v1
+      #   #if: steps.list-changed.outputs.changed == 'true'
+
+      # - name: chart-testing (run install)
+      #   run: ct install
