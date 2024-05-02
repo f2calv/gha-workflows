@@ -18,9 +18,6 @@ on:
 jobs:
   build-chart:
     runs-on: ubuntu-latest
-    permissions:
-      packages: write #for pushing helm artifact
-      contents: read #note: for private repos setting packages to write, will reset all other permissions to none (weird?)
     steps:
       - uses: actions/checkout@v4
 
