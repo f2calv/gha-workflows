@@ -54,10 +54,10 @@ jobs:
             echo "CHART_PATH=${{ inputs.chart-path }}/$CHART_NAME" >> $GITHUB_ENV
           fi
 
-      - name: helm registry login
+      - name: helm build/lint/package
         run: |
-          echo $CHART_NAME
-          echo $CHART_PATH
+          echo "CHART_NAME=$CHART_NAME"
+          echo "CHART_PATH=$CHART_PATH"
 
           printf "\nhelm version...\n"
           helm version
@@ -107,12 +107,17 @@ jobs:
             cat ${{ github.workspace }}/artifacts/$CHART_NAME.yaml
           fi
 
-          printf "\nhelm push...\n"
-          #https://helm.sh/docs/helm/helm_push/
-          helm push ${{ github.workspace }}/artifacts/$CHART_NAME-${{ inputs.tag }}.tgz oci://${{ inputs.registry }}/${{ github.repository_owner }}
-          #helm push ${{ github.workspace }}/artifacts/$CHART_NAME-${{ inputs.tag }}.tgz oci://${{ inputs.registry }}/charts
-
           printf "\nsuccess!"
+        
+      - name: helm push
+        #if: github.ref == 'refs/heads/main'
+        run: |
+          echo "CHART_NAME=$CHART_NAME"
+          echo "CHART_PATH=$CHART_PATH"
+
+          #https://helm.sh/docs/helm/helm_push/
+          helm push ${{ github.workspace }}/artifacts/$CHART_NAME-${{ inputs.tag }}.tgz oci://${{ inputs.registry }}/${{ github.repository_owner }}/charts
+          #helm push ${{ github.workspace }}/artifacts/$CHART_NAME-${{ inputs.tag }}.tgz oci://${{ inputs.registry }}/charts
 
       # - uses: actions/setup-python@v5
       #   with:
