@@ -11,26 +11,30 @@ on:
         type: string
         description: e.g. latest, latest-dev, 1.2.3
         required: true
+      chart-name:
+        type: string
+        description: If not set uses the name of the current repository
 
 jobs:
   build-chart:
     runs-on: ubuntu-latest
     permissions:
       packages: write #for pushing helm package
-    env:
-      REGISTRY: ${{ inputs.registry }}
-      #CHART_REPOSITORY: Note: set dynamically, i.e. github.repository_owner/charts/IMAGE_NAME
-      TAG: ${{ inputs.tag }}
     steps:
       - uses: actions/checkout@v4
 
-      - name: set vars (1 of 2)
+      - name: set chart-name (1 of 2)
+        if: inputs.chart-name == ''
         run: |
-          IMAGE_NAME=$(echo $REPOSITORY | sed "s|$USERNAME\/||g")
-          echo "IMAGE_NAME=$IMAGE_NAME" >> $GITHUB_ENV
+          CHART_NAME=$(echo $REPOSITORY | sed "s|$USERNAME\/||g")
+          echo "CHART_NAME=charts/$CHART_NAME" >> $GITHUB_ENV
 
-      - name: set vars (2 of 2)
-        run: echo "CHART_REPOSITORY=${{ github.repository_owner }}/charts/$IMAGE_NAME" >> $GITHUB_ENV
+      - name: set chart-name (2 of 2)
+        if: inputs.chart-name != ''
+        run: echo "CHART_NAME=charts/${{ inputs.chart-name }}" >> $GITHUB_ENV
+
+      - name: set CHART_REPOSITORY
+        run: echo "CHART_REPOSITORY=${{ github.repository_owner }}/$CHART_NAME" >> $GITHUB_ENV
 
       - name: setup helm (1 of 2) #pulls version from devcontainer
         run: |
@@ -47,7 +51,7 @@ jobs:
 
       - name: helm registry login
         run: |
-          echo ${{ secrets.GITHUB_TOKEN }} | helm registry login ${REGISTRY}/${CHART_REPOSITORY} --username ${{ github.repository_owner }} --password-stdin
+          echo ${{ secrets.GITHUB_TOKEN }} | helm registry login ${{ inputs.registry }}/${{ github.repository_owner }} --username ${{ github.repository_owner }} --password-stdin
 
       - uses: actions/setup-python@v5
         with:
@@ -82,10 +86,8 @@ jobs:
 
       - name: helm package
         run: |
-          helm package ${{ github.workspace }}/charts/$IMAGE_NAME/ --destination ${{ github.workspace }}/artifacts/ --app-version ${{ env.TAG }}
-        if: false #not implemented/working yet
+          helm package ${{ github.workspace }}/$CHART_NAME/ --destination ${{ github.workspace }}/artifacts/ --app-version ${{ inputs.tag }}
 
       - name: helm push
         run: |
-          helm push ${{ github.workspace }}/artifacts/$IMAGE_NAME-0.1.0.tgz oci://ghcr.io/${{ github.repository_owner }}
-        if: false #not implemented/working yet, need to change the chart version in filename
+          helm push ${{ github.workspace }}/artifacts/$CHART_NAME-${{ inputs.tag }}.tgz oci://ghcr.io/${{ github.repository_owner }}
