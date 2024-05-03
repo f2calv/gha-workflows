@@ -45,14 +45,13 @@ jobs:
       - name: set CHART_PATH
         run: |
           if [ -z "${{ inputs.chart-name }}" ]; then
-            CHART_NAME=$(echo ${{ github.repository }} | sed "s|$USERNAME\/||g")
-            echo "CHART_NAME=$CHART_NAME" >> $GITHUB_ENV
-            echo "CHART_PATH=${{ inputs.chart-path }}/$CHART_NAME" >> $GITHUB_ENV
+            CHART_NAME=$(echo ${{ github.repository }} | sed "s|${{ github.repository_owner }}\/||g")
           else
             CHART_NAME=${{ inputs.chart-name }}
-            echo "CHART_NAME=${{ inputs.chart-name }}" >> $GITHUB_ENV
-            echo "CHART_PATH=${{ inputs.chart-path }}/$CHART_NAME" >> $GITHUB_ENV
           fi
+          CHART_NAME=${CHART_NAME,,}
+          echo "CHART_NAME=$CHART_NAME" >> $GITHUB_ENV
+          echo "CHART_PATH=${{ inputs.chart-path }}/$CHART_NAME" >> $GITHUB_ENV
 
       - name: helm build/lint/package
         run: |
