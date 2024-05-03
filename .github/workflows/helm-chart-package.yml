@@ -83,7 +83,7 @@ jobs:
           cat $CHART_PATH/Chart.yaml
 
           printf "\nUpdate the repository in the values.yaml before packaging...\n"
-          REPOSITORY=$REPOSITORY yq -i '.image.repository = env(REPOSITORY)' $CHART_PATH/values.yaml
+          yq -i '.image.repository = env(REPOSITORY)' $CHART_PATH/values.yaml
           cat $CHART_PATH/values.yaml
 
           #https://helm.sh/docs/helm/helm_dependency_update/
@@ -104,7 +104,7 @@ jobs:
     
           if [ "${{ inputs.is-library-chart }}" == "false" ]; then
             #https://helm.sh/docs/helm/helm_template/
-            printf "\nhelm template...\n"
+            printf "\nhelm template to show the fully expanded manifest...\n"
             helm template $CHART_NAME $CHART_PATH \
                 --version "${{ inputs.tag }}" \
                 --set image.tag="${{ inputs.tag }}" \
@@ -124,10 +124,6 @@ jobs:
       - name: helm push
         if: github.ref == 'refs/heads/main'
         run: |
-          echo "CHART_NAME=$CHART_NAME"
-          echo "CHART_PATH=$CHART_PATH"
-          echo "REGISTRY=$REGISTRY"
-
           #https://helm.sh/docs/helm/helm_push/
           helm push ${{ github.workspace }}/artifacts/$CHART_NAME-${{ inputs.tag }}.tgz oci://$REGISTRY/charts
 
