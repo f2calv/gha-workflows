@@ -17,7 +17,7 @@ on:
         default: ''
 
 jobs:
-  build-app:
+  app-build-dotnet:
     runs-on: ubuntu-latest
     #if: github.actor != 'depbot'
     steps:

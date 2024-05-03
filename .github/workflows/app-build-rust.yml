@@ -9,7 +9,7 @@ on:
         required: true
 
 jobs:
-  build-app:
+  app-build-rust:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
