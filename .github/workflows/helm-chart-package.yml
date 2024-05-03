@@ -5,7 +5,7 @@ on:
     inputs:
       registry:
         type: string
-        description: e.g. ghcr.io, docker.io, xyz.azurecr.io
+        description: e.g. ghcr.io or xyz.azurecr.io
         default: ghcr.io
       tag:
         type: string
@@ -24,7 +24,7 @@ on:
         default: false
 
 jobs:
-  build-chart:
+  helm-chart-package:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -42,7 +42,7 @@ jobs:
         with:
           version: ${{ env.VERSION_TO_INSTALL }}
 
-      - name: set CHART_PATH
+      - name: set vars
         run: |
           if [ -z "${{ inputs.chart-name }}" ]; then
             CHART_NAME=$(echo ${{ github.repository }} | sed "s|${{ github.repository_owner }}\/||g")
@@ -53,49 +53,64 @@ jobs:
           echo "CHART_NAME=$CHART_NAME" >> $GITHUB_ENV
           echo "CHART_PATH=${{ inputs.chart-path }}/$CHART_NAME" >> $GITHUB_ENV
 
+          if [ "${{ inputs.registry }}" == "ghcr.io" ]; then
+            REGISTRY=${{ inputs.registry }}/${{ github.repository_owner }}
+          else
+            REGISTRY=${{ inputs.registry }}
+          fi
+          echo "REGISTRY=$REGISTRY" >> $GITHUB_ENV
+          echo "REPOSITORY=$REGISTRY/$CHART_NAME" >> $GITHUB_ENV
+          echo "TAG=${{ inputs.tag }}" >> $GITHUB_ENV
+
       - name: helm build/lint/package
         run: |
           echo "CHART_NAME=$CHART_NAME"
           echo "CHART_PATH=$CHART_PATH"
+          echo "REGISTRY=$REGISTRY"
+          echo "REPOSITORY=$REPOSITORY"
+          echo "TAG=$TAG"
 
-          printf "\nhelm version...\n"
+          printf "\n\nhelm version...\n"
           helm version
 
-          printf "\nhelm registry login...\n"
-          printf ${{ secrets.GITHUB_TOKEN }} | helm registry login ${{ inputs.registry }}/${{ github.repository_owner }} --username ${{ github.repository_owner }} --password-stdin
-          #printf $servicePrincipalKey | helm registry login ${{ inputs.registry }} --username $servicePrincipalId --password-stdin
+          printf "\n\nhelm registry login...\n"
+          printf ${{ secrets.GITHUB_TOKEN }} | helm registry login $REGISTRY --username ${{ github.repository_owner }} --password-stdin
+          #printf $servicePrincipalKey | helm registry login $REGISTRY --username $servicePrincipalId --password-stdin
 
-          printf "\nUpdate the version+appVersion of the Chart.yaml before packaging...\n"
-          yq -i '.version = "${{ inputs.tag }}"' $CHART_PATH/Chart.yaml
+          printf "\n\nUpdate the version+appVersion in the Chart.yaml before packaging...\n"
+          yq -i '.version = env(TAG)' $CHART_PATH/Chart.yaml
           if [ "${{ inputs.is-library-chart }}" == "false" ]; then
-            yq -i '.appVersion = "${{ inputs.tag }}"' $CHART_PATH/Chart.yaml
+            yq -i '.appVersion = env(TAG)' $CHART_PATH/Chart.yaml
           fi
           cat $CHART_PATH/Chart.yaml
 
+          printf "\n\nUpdate the repository in the values.yaml before packaging...\n"
+          yq -i '.image.repository = env(REPOSITORY)' $CHART_PATH/values.yaml
+          cat $CHART_PATH/values.yaml
+
           #https://helm.sh/docs/helm/helm_dependency_update/
-          printf "\nhelm dependency update...\n"
+          printf "\n\nhelm dependency update...\n"
           helm dependency update $CHART_PATH
     
           #https://helm.sh/docs/helm/helm_dependency_list/
-          printf "\nhelm dependency list...\n"
+          printf "\n\nhelm dependency list...\n"
           helm dependency list $CHART_PATH
     
           #https://helm.sh/docs/helm/helm_lint/
-          printf "\nhelm lint...\n"
+          printf "\n\nhelm lint...\n"
           helm lint $CHART_PATH
 
           #https://helm.sh/docs/helm/helm_package/
-          printf "\nhelm package...\n"
-          helm package $CHART_PATH --destination ${{ github.workspace }}/artifacts/ --app-version ${{ inputs.tag }}
+          printf "\n\nhelm package...\n"
+          helm package $CHART_PATH --destination ${{ github.workspace }}/artifacts/ --app-version $TAG
     
           if [ "${{ inputs.is-library-chart }}" == "false" ]; then
             #https://helm.sh/docs/helm/helm_template/
-            printf "\nhelm template...\n"
+            printf "\n\nhelm template to show the fully expanded manifest...\n"
             helm template $CHART_NAME $CHART_PATH \
-                --version "${{ inputs.tag }}" \
-                --set image.tag="${{ inputs.tag }}" \
-                --set image.repository=$CHART_NAME \
-                --set image.registry="${{ inputs.registry }}" \
+                --version "$TAG" \
+                --set image.tag="$TAG" \
+                --set image.repository=$REPOSITORY \
                 --set run_id="${{ github.run_id }}" \
                 --set run_number="${{ github.run_number }}" \
                 --set workflow="${{ github.workflow }}" \
@@ -106,17 +121,13 @@ jobs:
             cat ${{ github.workspace }}/artifacts/$CHART_NAME.yaml
           fi
 
-          printf "\nsuccess!"
+          printf "\n\nsuccess!"
         
       - name: helm push
         if: github.ref == 'refs/heads/main'
         run: |
-          echo "CHART_NAME=$CHART_NAME"
-          echo "CHART_PATH=$CHART_PATH"
-
           #https://helm.sh/docs/helm/helm_push/
-          helm push ${{ github.workspace }}/artifacts/$CHART_NAME-${{ inputs.tag }}.tgz oci://${{ inputs.registry }}/${{ github.repository_owner }}/charts
-          #helm push ${{ github.workspace }}/artifacts/$CHART_NAME-${{ inputs.tag }}.tgz oci://${{ inputs.registry }}/charts
+          helm push ${{ github.workspace }}/artifacts/$CHART_NAME-$TAG.tgz oci://$REGISTRY/charts
 
       # - uses: actions/setup-python@v5
       #   with:
