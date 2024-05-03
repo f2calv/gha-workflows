@@ -60,6 +60,7 @@ jobs:
           fi
           echo "REGISTRY=$REGISTRY" >> $GITHUB_ENV
           echo "REPOSITORY=$REGISTRY/$CHART_NAME" >> $GITHUB_ENV
+          echo "TAG=${{ inputs.tag }}" >> $GITHUB_ENV
 
       - name: helm build/lint/package
         run: |
@@ -67,6 +68,7 @@ jobs:
           echo "CHART_PATH=$CHART_PATH"
           echo "REGISTRY=$REGISTRY"
           echo "REPOSITORY=$REPOSITORY"
+          echo "TAG=$TAG"
 
           printf "\nhelm version...\n"
           helm version
@@ -76,9 +78,9 @@ jobs:
           #printf $servicePrincipalKey | helm registry login $REGISTRY --username $servicePrincipalId --password-stdin
 
           printf "\nUpdate the version+appVersion in the Chart.yaml before packaging...\n"
-          yq -i '.version = "${{ inputs.tag }}"' $CHART_PATH/Chart.yaml
+          yq -i '.version = env(TAG)' $CHART_PATH/Chart.yaml
           if [ "${{ inputs.is-library-chart }}" == "false" ]; then
-            yq -i '.appVersion = "${{ inputs.tag }}"' $CHART_PATH/Chart.yaml
+            yq -i '.appVersion = env(TAG)' $CHART_PATH/Chart.yaml
           fi
           cat $CHART_PATH/Chart.yaml
 
@@ -100,14 +102,14 @@ jobs:
 
           #https://helm.sh/docs/helm/helm_package/
           printf "\nhelm package...\n"
-          helm package $CHART_PATH --destination ${{ github.workspace }}/artifacts/ --app-version ${{ inputs.tag }}
+          helm package $CHART_PATH --destination ${{ github.workspace }}/artifacts/ --app-version $TAG
     
           if [ "${{ inputs.is-library-chart }}" == "false" ]; then
             #https://helm.sh/docs/helm/helm_template/
             printf "\nhelm template to show the fully expanded manifest...\n"
             helm template $CHART_NAME $CHART_PATH \
-                --version "${{ inputs.tag }}" \
-                --set image.tag="${{ inputs.tag }}" \
+                --version "$TAG" \
+                --set image.tag="$TAG" \
                 --set image.repository=$REPOSITORY \
                 --set run_id="${{ github.run_id }}" \
                 --set run_number="${{ github.run_number }}" \
@@ -125,7 +127,7 @@ jobs:
         if: github.ref == 'refs/heads/main'
         run: |
           #https://helm.sh/docs/helm/helm_push/
-          helm push ${{ github.workspace }}/artifacts/$CHART_NAME-${{ inputs.tag }}.tgz oci://$REGISTRY/charts
+          helm push ${{ github.workspace }}/artifacts/$CHART_NAME-$TAG.tgz oci://$REGISTRY/charts
 
       # - uses: actions/setup-python@v5
       #   with:
