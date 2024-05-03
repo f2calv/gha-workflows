@@ -59,12 +59,14 @@ jobs:
             REGISTRY=${{ inputs.registry }}
           fi
           echo "REGISTRY=$REGISTRY" >> $GITHUB_ENV
+          echo "REPOSITORY=$REGISTRY/$CHART_NAME" >> $GITHUB_ENV
 
       - name: helm build/lint/package
         run: |
           echo "CHART_NAME=$CHART_NAME"
           echo "CHART_PATH=$CHART_PATH"
           echo "REGISTRY=$REGISTRY"
+          echo "REPOSITORY=$REPOSITORY"
 
           printf "\nhelm version...\n"
           helm version
@@ -81,7 +83,7 @@ jobs:
           cat $CHART_PATH/Chart.yaml
 
           printf "\nUpdate the repository in the values.yaml before packaging...\n"
-          REPOSITORY="$REGISTRY/$CHART_NAME" yq -i '.image.repository = env(REPOSITORY)' $CHART_PATH/values.yaml
+          REPOSITORY=$REPOSITORY yq -i '.image.repository = env(REPOSITORY)' $CHART_PATH/values.yaml
           cat $CHART_PATH/values.yaml
 
           #https://helm.sh/docs/helm/helm_dependency_update/
@@ -106,8 +108,7 @@ jobs:
             helm template $CHART_NAME $CHART_PATH \
                 --version "${{ inputs.tag }}" \
                 --set image.tag="${{ inputs.tag }}" \
-                --set image.repository=$CHART_NAME \
-                --set image.registry="${{ inputs.registry }}" \
+                --set image.repository=$REPOSITORY \
                 --set run_id="${{ github.run_id }}" \
                 --set run_number="${{ github.run_number }}" \
                 --set workflow="${{ github.workflow }}" \
