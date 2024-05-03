@@ -50,14 +50,15 @@ jobs:
           repository: ${{ inputs.gitops-repository }}
           token: ${{ secrets.gitops-repository-token }}
 
-      #Note: for a reusable workflow to gain access to a local action we need to perform an additional checkout
-      - uses: actions/checkout@v4
-        with:
-          repository: f2calv/gha-workflows #Note: this repo name
-          ref: ${{ github.ref_name }} #Note: assumes that the rwf repo has an identical branch name to the calling branch
-          path: workflows
+      #Note: below workflow code left in place to show how to access a local action from inside a reuseable workflow, i.e. messy!
+      # - uses: actions/checkout@v4
+      #   with:
+      #     repository: f2calv/gha-workflows #Note: this repo name
+      #     ref: ${{ github.ref_name }} #Note: assumes that the ref repo has an identical branch name to the calling branch
+      #     path: workflows
 
-      - uses: ./workflows/.github/actions/gitops-manifest-update
+      - uses: f2calv/gha-gitops-manifest-update@v1
+        #uses: ./workflows/.github/actions/gha-gitops-manifest-update
         with:
           registry: ${{ inputs.registry }}
           repository: ${{ inputs.repository }}
