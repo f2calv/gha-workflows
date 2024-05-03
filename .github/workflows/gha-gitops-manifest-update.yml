@@ -1,4 +1,4 @@
-name: gitops-manifest-update
+name: gha-gitops-manifest-update
 
 on:
   workflow_call:
@@ -41,7 +41,7 @@ on:
         required: true
 
 jobs:
-  gitops-manifest-update:
+  gha-gitops-manifest-update:
     runs-on: ubuntu-latest
     if: github.actor != 'depbot'
     steps:
