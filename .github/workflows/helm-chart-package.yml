@@ -5,7 +5,7 @@ on:
     inputs:
       registry:
         type: string
-        description: e.g. ghcr.io, docker.io, xyz.azurecr.io
+        description: e.g. ghcr.io or xyz.azurecr.io
         default: ghcr.io
       tag:
         type: string
@@ -42,7 +42,7 @@ jobs:
         with:
           version: ${{ env.VERSION_TO_INSTALL }}
 
-      - name: set CHART_PATH
+      - name: set vars
         run: |
           if [ -z "${{ inputs.chart-name }}" ]; then
             CHART_NAME=$(echo ${{ github.repository }} | sed "s|${{ github.repository_owner }}\/||g")
@@ -53,24 +53,36 @@ jobs:
           echo "CHART_NAME=$CHART_NAME" >> $GITHUB_ENV
           echo "CHART_PATH=${{ inputs.chart-path }}/$CHART_NAME" >> $GITHUB_ENV
 
+          if [ "${{ inputs.registry }}" == "ghcr.io" ]; then
+            REGISTRY=${{ inputs.registry }}/${{ github.repository_owner }}
+          else
+            REGISTRY=${{ inputs.registry }}
+          fi
+          echo "REGISTRY=$REGISTRY" >> $GITHUB_ENV
+
       - name: helm build/lint/package
         run: |
           echo "CHART_NAME=$CHART_NAME"
           echo "CHART_PATH=$CHART_PATH"
+          echo "REGISTRY=$REGISTRY"
 
           printf "\nhelm version...\n"
           helm version
 
           printf "\nhelm registry login...\n"
-          printf ${{ secrets.GITHUB_TOKEN }} | helm registry login ${{ inputs.registry }}/${{ github.repository_owner }} --username ${{ github.repository_owner }} --password-stdin
-          #printf $servicePrincipalKey | helm registry login ${{ inputs.registry }} --username $servicePrincipalId --password-stdin
+          printf ${{ secrets.GITHUB_TOKEN }} | helm registry login $REGISTRY --username ${{ github.repository_owner }} --password-stdin
+          #printf $servicePrincipalKey | helm registry login $REGISTRY --username $servicePrincipalId --password-stdin
 
-          printf "\nUpdate the version+appVersion of the Chart.yaml before packaging...\n"
+          printf "\nUpdate the version+appVersion in the Chart.yaml before packaging...\n"
           yq -i '.version = "${{ inputs.tag }}"' $CHART_PATH/Chart.yaml
           if [ "${{ inputs.is-library-chart }}" == "false" ]; then
             yq -i '.appVersion = "${{ inputs.tag }}"' $CHART_PATH/Chart.yaml
           fi
           cat $CHART_PATH/Chart.yaml
+
+          printf "\nUpdate the repository in the values.yaml before packaging...\n"
+          REGISTRY=$REGISTRY CHART_NAME=$CHART_NAME yq -i '.image.repository = "env(REGISTRY)/env(CHART_NAME):${{ inputs.tag }}"' $CHART_PATH/values.yaml
+          cat $CHART_PATH/values.yaml
 
           #https://helm.sh/docs/helm/helm_dependency_update/
           printf "\nhelm dependency update...\n"
@@ -113,10 +125,10 @@ jobs:
         run: |
           echo "CHART_NAME=$CHART_NAME"
           echo "CHART_PATH=$CHART_PATH"
+          echo "REGISTRY=$REGISTRY"
 
           #https://helm.sh/docs/helm/helm_push/
-          helm push ${{ github.workspace }}/artifacts/$CHART_NAME-${{ inputs.tag }}.tgz oci://${{ inputs.registry }}/${{ github.repository_owner }}/charts
-          #helm push ${{ github.workspace }}/artifacts/$CHART_NAME-${{ inputs.tag }}.tgz oci://${{ inputs.registry }}/charts
+          helm push ${{ github.workspace }}/artifacts/$CHART_NAME-${{ inputs.tag }}.tgz oci://$REGISTRY/charts
 
       # - uses: actions/setup-python@v5
       #   with:
