@@ -12,7 +12,8 @@ These workflows cover a number of common scenarios that I face across my public/
 ## GitHub Packages: Containers
 
 - [Container Image Build](.github/workflows/container-image-build.yml)
-- [Helm Chart Build](.github/workflows/helm-chart-build.yml)
+- [Helm Chart Package](.github/workflows/helm-chart-package.yml)
+- [GitOps Manifest Update](.github/workflows/gha-gitops-manifest-update.yml)
 
 ## GitHub Packages: NuGet
 
