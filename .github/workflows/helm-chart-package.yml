@@ -70,43 +70,43 @@ jobs:
           echo "REPOSITORY=$REPOSITORY"
           echo "TAG=$TAG"
 
-          printf "\nhelm version...\n"
+          printf "\n\nhelm version...\n"
           helm version
 
-          printf "\nhelm registry login...\n"
+          printf "\n\nhelm registry login...\n"
           printf ${{ secrets.GITHUB_TOKEN }} | helm registry login $REGISTRY --username ${{ github.repository_owner }} --password-stdin
           #printf $servicePrincipalKey | helm registry login $REGISTRY --username $servicePrincipalId --password-stdin
 
-          printf "\nUpdate the version+appVersion in the Chart.yaml before packaging...\n"
+          printf "\n\nUpdate the version+appVersion in the Chart.yaml before packaging...\n"
           yq -i '.version = env(TAG)' $CHART_PATH/Chart.yaml
           if [ "${{ inputs.is-library-chart }}" == "false" ]; then
             yq -i '.appVersion = env(TAG)' $CHART_PATH/Chart.yaml
           fi
           cat $CHART_PATH/Chart.yaml
 
-          printf "\nUpdate the repository in the values.yaml before packaging...\n"
+          printf "\n\nUpdate the repository in the values.yaml before packaging...\n"
           yq -i '.image.repository = env(REPOSITORY)' $CHART_PATH/values.yaml
           cat $CHART_PATH/values.yaml
 
           #https://helm.sh/docs/helm/helm_dependency_update/
-          printf "\nhelm dependency update...\n"
+          printf "\n\nhelm dependency update...\n"
           helm dependency update $CHART_PATH
     
           #https://helm.sh/docs/helm/helm_dependency_list/
-          printf "\nhelm dependency list...\n"
+          printf "\n\nhelm dependency list...\n"
           helm dependency list $CHART_PATH
     
           #https://helm.sh/docs/helm/helm_lint/
-          printf "\nhelm lint...\n"
+          printf "\n\nhelm lint...\n"
           helm lint $CHART_PATH
 
           #https://helm.sh/docs/helm/helm_package/
-          printf "\nhelm package...\n"
+          printf "\n\nhelm package...\n"
           helm package $CHART_PATH --destination ${{ github.workspace }}/artifacts/ --app-version $TAG
     
           if [ "${{ inputs.is-library-chart }}" == "false" ]; then
             #https://helm.sh/docs/helm/helm_template/
-            printf "\nhelm template to show the fully expanded manifest...\n"
+            printf "\n\nhelm template to show the fully expanded manifest...\n"
             helm template $CHART_NAME $CHART_PATH \
                 --version "$TAG" \
                 --set image.tag="$TAG" \
@@ -121,7 +121,7 @@ jobs:
             cat ${{ github.workspace }}/artifacts/$CHART_NAME.yaml
           fi
 
-          printf "\nsuccess!"
+          printf "\n\nsuccess!"
         
       - name: helm push
         if: github.ref == 'refs/heads/main'
