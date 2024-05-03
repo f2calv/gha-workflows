@@ -44,9 +44,6 @@ jobs:
     if: github.actor != 'depbot'
     #https://github.blog/changelog/2021-04-20-github-actions-control-permissions-for-github_token/
     #https://docs.github.com/en/actions/using-jobs/assigning-permissions-to-jobs
-    permissions:
-      packages: write #for pushing container image
-      contents: read #note: for private repos setting packages to write, will reset all other permissions to none (weird?)
     outputs:
       deployableRepository: ${{ steps.setupvars.outputs.deployableRepository }}
       deployableTag: ${{ steps.build.outputs.deployableTag }}
