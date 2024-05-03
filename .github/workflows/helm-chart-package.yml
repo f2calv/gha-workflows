@@ -81,7 +81,7 @@ jobs:
           cat $CHART_PATH/Chart.yaml
 
           printf "\nUpdate the repository in the values.yaml before packaging...\n"
-          REGISTRY=$REGISTRY CHART_NAME=$CHART_NAME yq -i '.image.repository = "env(REGISTRY)/env(CHART_NAME):${{ inputs.tag }}"' $CHART_PATH/values.yaml
+          REPOSITORY="$REGISTRY/$CHART_NAME" yq -i '.image.repository = env(REPOSITORY)' $CHART_PATH/values.yaml
           cat $CHART_PATH/values.yaml
 
           #https://helm.sh/docs/helm/helm_dependency_update/
