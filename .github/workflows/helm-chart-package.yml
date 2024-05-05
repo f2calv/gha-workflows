@@ -84,9 +84,11 @@ jobs:
           fi
           cat $CHART_PATH/Chart.yaml
 
-          printf "\n\nUpdate the repository in the values.yaml before packaging...\n"
-          yq -i '.image.repository = env(REPOSITORY)' $CHART_PATH/values.yaml
-          cat $CHART_PATH/values.yaml
+          if [ "${{ inputs.is-library-chart }}" == "false" ]; then
+            printf "\n\nUpdate the repository in the values.yaml before packaging...\n"
+            yq -i '.image.repository = env(REPOSITORY)' $CHART_PATH/values.yaml
+            cat $CHART_PATH/values.yaml
+          fi
 
           #https://helm.sh/docs/helm/helm_dependency_update/
           printf "\n\nhelm dependency update...\n"
