@@ -1,4 +1,5 @@
 name: container-image-build
+#Note: this uses buildx for multiarchitecture builds, maybe make an opt-out for this in the future?
 
 on:
   workflow_call:
@@ -10,6 +11,10 @@ on:
       repositoryOverride:
         type: string
         description: Default repository is the name of the repo, i.e. f2calv/my-repo-name
+      dockerfile:
+        type: string
+        description: Location of the Dockerfile in the local repository you wish to build.
+        default: Dockerfile
       tag:
         type: string
         description: e.g. 1.2.3-feature-my-feature.12
@@ -28,7 +33,7 @@ on:
         default: linux/amd64,linux/arm64,linux/arm/v7
       pushOverride:
         type: boolean
-        description: image push happens only on default branch, override by setting true
+        description: Image push happens *only* from builds on the default branch, override by setting 'true'
         default: false
     outputs:
       deployableRepository:
@@ -119,6 +124,7 @@ jobs:
           fi
 
           docker buildx build \
+            -f ${{ inputs.dockerfile }} \
             -t ${{ inputs.registry }}/$REPOSITORY:$TAG \
             "${OPT_TAG[@]}" \
             --label "GITHUB_RUN_ID=${{ github.run_id }}" \
