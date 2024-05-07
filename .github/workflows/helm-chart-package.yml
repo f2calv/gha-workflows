@@ -90,8 +90,8 @@ jobs:
             cat $CHART_PATH/values.yaml
           fi
 
-          printf "\n\nhelm pull oci://$REGISTRY/$REPOSITORY --version 0.1.7\n"
-          helm pull oci://$REGISTRY/$REPOSITORY --version 0.1.7
+          printf "\n\nhelm pull oci://$REGISTRY/cascommon --version 0.1.7\n"
+          helm pull oci://$REGISTRY/cascommon --version 0.1.7
 
           printf "\n\nhelm pull completed...\n"
 
