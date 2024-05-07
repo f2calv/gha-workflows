@@ -128,7 +128,10 @@ jobs:
           echo "REPOSITORY=$REPOSITORY"
           echo "TAG=$OVERRIDE_TAG"
           echo "OVERRIDE_TAG=$OVERRIDE_TAG"
+          echo "OPT_TAG=${OPT_TAG[@]}"
           echo "IMAGE_PUSH=$IMAGE_PUSH"
+          echo "OPT_PUSH=${OPT_PUSH[@]}"
+          echo "DockerFile=${{ inputs.dockerfile }}"
 
           docker buildx build \
             -f "${{ inputs.dockerfile }}" \
