@@ -136,7 +136,6 @@ jobs:
           docker buildx build \
             -f "${{ inputs.dockerfile }}" \
             -t "$REGISTRY/$REPOSITORY:$TAG" \
-            "${OPT_TAG[@]}" \
             --label "GITHUB_RUN_ID=${{ github.run_id }}" \
             --label "IMAGE_NAME=$IMAGE_NAME" \
             --label "org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}" \
