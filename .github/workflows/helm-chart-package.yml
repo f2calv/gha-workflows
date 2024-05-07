@@ -90,6 +90,7 @@ jobs:
             cat $CHART_PATH/values.yaml
           fi
 
+          #Note: when pulling library charts from private ghcr packages you need to give the pulling repository permission to pull the package
           #https://helm.sh/docs/helm/helm_dependency_update/
           printf "\n\nhelm dependency update...\n"
           helm dependency update $CHART_PATH
