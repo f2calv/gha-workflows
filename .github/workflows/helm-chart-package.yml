@@ -74,8 +74,7 @@ jobs:
           helm version
 
           printf "\n\nhelm registry login...\n"
-          #printf ${{ secrets.GITHUB_TOKEN }} | helm registry login $REGISTRY --username ${{ github.repository_owner }} --password-stdin
-          gh auth token | helm registry login $REGISTRY --username ${{ github.repository_owner }} --password-stdin
+          printf ${{ secrets.GITHUB_TOKEN }} | helm registry login $REGISTRY --username ${{ github.repository_owner }} --password-stdin
           #printf $servicePrincipalKey | helm registry login $REGISTRY --username $servicePrincipalId --password-stdin
 
           printf "\n\nUpdate the version+appVersion in the Chart.yaml before packaging...\n"
