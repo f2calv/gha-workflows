@@ -83,6 +83,7 @@ jobs:
           TAG=${{ inputs.tag }}
           TAG=${TAG,,}
           echo "TAG=$TAG" >> $GITHUB_ENV
+          echo "REGISTRY=$REGISTRY" >> $GITHUB_ENV
 
       - name: set vars (2 of 3)
         if: github.ref != 'refs/heads/main' #feature branch use devTagOverride
@@ -103,7 +104,7 @@ jobs:
           echo "IMAGE_PUSH=true" >> $GITHUB_ENV
 
       - name: docker login ${{ inputs.registry }}
-        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ${{ inputs.registry }} -u ${{ github.actor }} --password-stdin
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login $REGISTRY -u ${{ github.actor }} --password-stdin
 
       - name: docker buildx build/push
         id: build
@@ -112,7 +113,7 @@ jobs:
 
           OPT_TAG=()
           if [ ! -z "$OVERRIDE_TAG" ]; then
-            OPT_TAG=(-t "${{ inputs.registry }}/$REPOSITORY:$OVERRIDE_TAG")
+            OPT_TAG=(-t "$REGISTRY/$REPOSITORY:$OVERRIDE_TAG")
             echo "deployableTag=$OVERRIDE_TAG" >> $GITHUB_OUTPUT
           else
             echo "deployableTag=$TAG" >> $GITHUB_OUTPUT
@@ -123,9 +124,17 @@ jobs:
             OPT_PUSH=(--push)
           fi
 
+          echo "REGISTRY=$REGISTRY"
+          echo "REPOSITORY=$REPOSITORY"
+          echo "deployableRepository=$deployableRepository"
+          echo "TAG=$OVERRIDE_TAG"
+          echo "OVERRIDE_TAG=$OVERRIDE_TAG"
+          echo "deployableTag=$deployableTag"
+          echo "IMAGE_PUSH=$IMAGE_PUSH"
+
           docker buildx build \
             -f ${{ inputs.dockerfile }} \
-            -t ${{ inputs.registry }}/$REPOSITORY:$TAG \
+            -t $REGISTRY/$REPOSITORY:$TAG \
             "${OPT_TAG[@]}" \
             --label "GITHUB_RUN_ID=${{ github.run_id }}" \
             --label "IMAGE_NAME=$IMAGE_NAME" \
