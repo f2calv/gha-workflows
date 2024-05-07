@@ -90,10 +90,6 @@ jobs:
             cat $CHART_PATH/values.yaml
           fi
 
-          printf "\n\nhelm pull oci://$REGISTRY/charts/cascommon --version 0.1.7\n"
-          helm pull oci://$REGISTRY/charts/cascommon --version 0.1.7
-          printf "\n\nhelm pull completed...\n"
-
           #https://helm.sh/docs/helm/helm_dependency_update/
           printf "\n\nhelm dependency update...\n"
           helm dependency update $CHART_PATH
