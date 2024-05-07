@@ -83,7 +83,7 @@ jobs:
           TAG=${{ inputs.tag }}
           TAG=${TAG,,}
           echo "TAG=$TAG" >> $GITHUB_ENV
-          echo "REGISTRY=$REGISTRY" >> $GITHUB_ENV
+          echo "REGISTRY=${{ inputs.registry }}" >> $GITHUB_ENV
 
       - name: set vars (2 of 3)
         if: github.ref != 'refs/heads/main' #feature branch use devTagOverride
