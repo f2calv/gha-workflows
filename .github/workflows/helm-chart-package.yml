@@ -74,7 +74,8 @@ jobs:
           helm version
 
           printf "\n\nhelm registry login...\n"
-          printf ${{ secrets.GITHUB_TOKEN }} | helm registry login $REGISTRY --username ${{ github.repository_owner }} --password-stdin
+          #printf ${{ secrets.GITHUB_TOKEN }} | helm registry login $REGISTRY --username ${{ github.repository_owner }} --password-stdin
+          gh auth token | helm registry login $REGISTRY --username ${{ github.repository_owner }} --password-stdin
           #printf $servicePrincipalKey | helm registry login $REGISTRY --username $servicePrincipalId --password-stdin
 
           printf "\n\nUpdate the version+appVersion in the Chart.yaml before packaging...\n"
@@ -89,6 +90,8 @@ jobs:
             yq -i '.image.repository = env(REPOSITORY)' $CHART_PATH/values.yaml
             cat $CHART_PATH/values.yaml
           fi
+
+          helm pull oci://$REGISTRY/${{ github.repository_owner }}/$CHART_PATH --version 0.1.7
 
           #https://helm.sh/docs/helm/helm_dependency_update/
           printf "\n\nhelm dependency update...\n"
