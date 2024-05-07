@@ -126,10 +126,8 @@ jobs:
 
           echo "REGISTRY=$REGISTRY"
           echo "REPOSITORY=$REPOSITORY"
-          echo "deployableRepository=$deployableRepository"
           echo "TAG=$OVERRIDE_TAG"
           echo "OVERRIDE_TAG=$OVERRIDE_TAG"
-          echo "deployableTag=$deployableTag"
           echo "IMAGE_PUSH=$IMAGE_PUSH"
 
           docker buildx build \
