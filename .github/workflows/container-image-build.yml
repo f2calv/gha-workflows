@@ -35,6 +35,10 @@ on:
         type: boolean
         description: Image push happens *only* from builds on the default branch, override by setting 'true'
         default: false
+      buildArgs:
+        type: string
+        description: Used to pass optional build arguments.
+        default: ''
     outputs:
       deployableRepository:
         description: Deployable repository name, e.g. lowercase owner/repo-name
@@ -124,6 +128,11 @@ jobs:
             OPT_PUSH=(--push)
           fi
 
+          OPT_BUILDARGS=()
+          if [ ! -z "${{ inputs.buildArgs }}" ]; then
+            OPT_BUILDARGS=(${{ inputs.buildArgs }})
+          fi
+
           echo "REGISTRY=$REGISTRY"
           echo "REPOSITORY=$REPOSITORY"
           echo "TAG=$OVERRIDE_TAG"
@@ -131,6 +140,8 @@ jobs:
           echo "OPT_TAG=${OPT_TAG[@]}"
           echo "IMAGE_PUSH=$IMAGE_PUSH"
           echo "OPT_PUSH=${OPT_PUSH[@]}"
+          echo "buildArgs=${{ inputs.buildArgs }}"
+          echo "OPT_BUILDARGS=${OPT_BUILDARGS[@]}"
           echo "DockerFile=${{ inputs.dockerfile }}"
 
           docker buildx build \
@@ -150,4 +161,5 @@ jobs:
             --platform ${{ inputs.platform }} \
             --pull \
             "${OPT_PUSH[@]}" \
+            "${OPT_BUILDARGS[@]}" \
             .
