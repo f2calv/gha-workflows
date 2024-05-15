@@ -5,8 +5,19 @@ on:
     inputs:
       registry:
         type: string
-        description: e.g. ghcr.io or xyz.azurecr.io
-        default: ghcr.io
+        description: e.g. ghcr.io/username, xyz.azurecr.io or docker.io
+        required: true
+      repository:
+        type: string
+        description: If unset we use the name of the current Git repository.
+      repository-prefix:
+        type: string
+        description: e.g. cas/
+        default: ''
+      chart-repository-prefix:
+        type: string
+        description: e.g. cas/charts
+        default: cas/charts
       tag:
         type: string
         description: e.g. latest, latest-dev, 1.2.3
@@ -15,9 +26,6 @@ on:
         type: string
         description: Relative path to the charts folder in the Git repository.
         default: ./charts
-      chart-name:
-        type: string
-        description: If unset we use the name of the current Git repository.
       is-library-chart:
         type: boolean
         description: Is the helm chart a library chart?
@@ -48,22 +56,18 @@ jobs:
 
       - name: set vars
         run: |
-          if [ -z "${{ inputs.chart-name }}" ]; then
-            CHART_NAME=$(echo ${{ github.repository }} | sed "s|${{ github.repository_owner }}\/||g")
+          if [ -z "${{ inputs.repository }}" ]; then
+            REPOSITORY=$(echo ${{ github.repository }} | sed "s|${{ github.repository_owner }}\/||g")
           else
-            CHART_NAME=${{ inputs.chart-name }}
+            REPOSITORY=${{ inputs.repository }}
           fi
-          CHART_NAME=${CHART_NAME,,}
-          echo "CHART_NAME=$CHART_NAME" >> $GITHUB_ENV
-          echo "CHART_PATH=${{ inputs.chart-path }}/$CHART_NAME" >> $GITHUB_ENV
+          REPOSITORY=${REPOSITORY,,}
+          echo "CHART_NAME=$REPOSITORY" >> $GITHUB_ENV
+          echo "CHART_PATH=${{ inputs.chart-path }}/$REPOSITORY" >> $GITHUB_ENV
 
-          if [ "${{ inputs.registry }}" == "ghcr.io" ]; then
-            REGISTRY=${{ inputs.registry }}/${{ github.repository_owner }}
-          else
-            REGISTRY=${{ inputs.registry }}
-          fi
+          REGISTRY=${{ inputs.registry }}
           echo "REGISTRY=$REGISTRY" >> $GITHUB_ENV
-          echo "REPOSITORY=$REGISTRY/$CHART_NAME" >> $GITHUB_ENV
+          echo "REPOSITORY=$REGISTRY/${{ inputs.repository-prefix }}$REPOSITORY" >> $GITHUB_ENV
           echo "TAG=${{ inputs.tag }}" >> $GITHUB_ENV
 
       - name: helm build/lint/package
@@ -134,7 +138,7 @@ jobs:
         if: github.ref == '${{ inputs.defaultBranch }}'
         run: |
           #https://helm.sh/docs/helm/helm_push/
-          helm push ${{ github.workspace }}/artifacts/$CHART_NAME-$TAG.tgz oci://$REGISTRY/charts
+          helm push ${{ github.workspace }}/artifacts/$CHART_NAME-$TAG.tgz oci://$REGISTRY/${{ chart-repository-prefix }}
 
       # - uses: actions/setup-python@v5
       #   with:
