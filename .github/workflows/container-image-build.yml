@@ -6,11 +6,14 @@ on:
     inputs:
       registry:
         type: string
-        description: e.g. ghcr.io or docker.io
-        default: ghcr.io
+        description: e.g. ghcr.io/username, xyz.azurecr.io or docker.io
       repositoryOverride:
         type: string
         description: Default repository is the name of the repo, i.e. f2calv/my-repo-name
+      repository-prefix:
+        type: string
+        description: e.g. cas/
+        default: ''
       dockerfile:
         type: string
         description: Location of the Dockerfile in the local repository you wish to build.
@@ -85,8 +88,8 @@ jobs:
             #lowercase the repository var and override the env variable
             REPOSITORY=${REPOSITORY,,}
           fi
-          echo "REPOSITORY=$REPOSITORY" >> $GITHUB_ENV
-          echo "deployableRepository=$REPOSITORY" >> $GITHUB_OUTPUT
+          echo "REPOSITORY=${{ inputs.repository-prefix }}$REPOSITORY" >> $GITHUB_ENV
+          echo "deployableRepository=${{ inputs.repository-prefix }}$REPOSITORY" >> $GITHUB_OUTPUT
 
           TAG=${{ inputs.tag }}
           TAG=${TAG,,}
