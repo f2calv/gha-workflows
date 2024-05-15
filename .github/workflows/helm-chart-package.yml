@@ -16,8 +16,8 @@ on:
         default: ''
       chart-repository-prefix:
         type: string
-        description: e.g. cas/charts
-        default: cas/charts
+        description: e.g. cas/charts/
+        required: true
       tag:
         type: string
         description: e.g. latest, latest-dev, 1.2.3
