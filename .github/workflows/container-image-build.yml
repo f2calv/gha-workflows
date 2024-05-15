@@ -7,6 +7,7 @@ on:
       registry:
         type: string
         description: e.g. ghcr.io/username, xyz.azurecr.io or docker.io
+        required: true
       repositoryOverride:
         type: string
         description: Default repository is the name of the repo, i.e. f2calv/my-repo-name
