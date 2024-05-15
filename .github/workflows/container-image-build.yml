@@ -39,6 +39,10 @@ on:
         type: string
         description: Used to pass optional build arguments.
         default: ''
+      defaultBranch:
+        type: string
+        description: Workflow behaves differently on the default branch.
+        default: refs/heads/main
     outputs:
       deployableRepository:
         description: Deployable repository name, e.g. lowercase owner/repo-name
@@ -90,7 +94,7 @@ jobs:
           echo "REGISTRY=${{ inputs.registry }}" >> $GITHUB_ENV
 
       - name: set vars (2 of 3)
-        if: github.ref != 'refs/heads/main' #feature branch use devTagOverride
+        if: github.ref != '${{ inputs.defaultBranch }}' #feature branch use devTagOverride
         run: |
           OVERRIDE_TAG=${{ inputs.devTagOverride }}
           OVERRIDE_TAG=${OVERRIDE_TAG,,}
@@ -99,7 +103,7 @@ jobs:
           echo "IMAGE_PUSH=${{ inputs.pushOverride }}" >> $GITHUB_ENV
 
       - name: set vars (3 of 3)
-        if: github.ref == 'refs/heads/main' #default branch use tagOverride
+        if: github.ref == '${{ inputs.defaultBranch }}' #default branch use tagOverride
         run: |
           OVERRIDE_TAG=${{ inputs.tagOverride }}
           OVERRIDE_TAG=${OVERRIDE_TAG,,}
