@@ -8,9 +8,10 @@ on:
         type: string
         description: e.g. ghcr.io/username, xyz.azurecr.io or docker.io
         required: true
-      repositoryOverride:
+      repository:
         type: string
-        description: Default repository is the name of the repo, i.e. f2calv/my-repo-name
+        description: If empty the repository will derive from name of the repo, i.e. f2calv/my-repo-name
+        default: ''
       repository-prefix:
         type: string
         description: e.g. cas/
@@ -67,19 +68,22 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      #Note: below needs to be tidied and tested with other repos
       - name: set vars (1 of 3)
         id: setupvars
         run: |
-          REPOSITORY_OVERRIDE=${{ inputs.repositoryOverride }}
+          REPOSITORY=${{ inputs.repository }}
 
-          if [ ! -z "$REPOSITORY_OVERRIDE" ]; then
-            #set the repository to the repositoryOverride & lowercase the input
-            REPOSITORY=${REPOSITORY_OVERRIDE,,}
+          if [ ! -z "$REPOSITORY" ]; then
+            #lowercase the input
+            REPOSITORY=${REPOSITORY,,}
+            IMAGE_NAME=${REPOSITORY,,}
 
             echo "IMAGE_NAME=$REPOSITORY" >> $GITHUB_ENV
           else
             #set the repository to the current gh repository
             REPOSITORY=${{ github.repository }}
+            
             #strip the repository_owner away from the repository name to get the image name
             IMAGE_NAME=$(echo $REPOSITORY | sed "s|${{ github.repository_owner }}\/||g")
             #lowercase the IMAGE_NAME
