@@ -34,6 +34,10 @@ on:
         type: string
         description: Workflow behaves differently on the default branch.
         default: refs/heads/main
+      pushOverride:
+        type: boolean
+        description: Image push happens *only* from builds on the default branch, override by setting 'true'
+        default: false
 
 jobs:
   helm-chart-package:
@@ -135,7 +139,7 @@ jobs:
           printf "\n\nsuccess!"
         
       - name: helm push
-        if: github.ref == '${{ inputs.defaultBranch }}'
+        if: github.ref == '${{ inputs.defaultBranch }}' || inputs.pushOverride == 'true'
         run: |
           #https://helm.sh/docs/helm/helm_push/
           helm push ${{ github.workspace }}/artifacts/$CHART_NAME-$TAG.tgz oci://$REGISTRY/${{ chart-repository-prefix }}
