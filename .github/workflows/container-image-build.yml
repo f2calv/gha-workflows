@@ -24,13 +24,13 @@ on:
         type: string
         description: e.g. 1.2.3-feature-my-feature.12
         required: true
-      tagOverride:
+      defaultBranchTag:
         type: string
-        description: Default branch tag override, i.e. tag 1.2.3 -> latest
+        description: Default branch tag, e.g. latest
         default: latest
-      devTagOverride:
+      featureBranchTag:
         type: string
-        description: Feature branch tag override, i.e. tag 1.2.3-feature-my-feature.12 -> latest-dev
+        description: Feature branch tag, e.g. latest-dev
         default: latest-dev
       platform:
         type: string
@@ -40,7 +40,7 @@ on:
         type: boolean
         description: Image push happens *only* from builds on the default branch, override by setting 'true'
         default: false
-      buildArgs:
+      args:
         type: string
         description: Used to pass optional build arguments.
         default: ''
@@ -52,9 +52,6 @@ on:
       deployableRepository:
         description: Deployable repository name, e.g. lowercase owner/repo-name
         value: ${{ jobs.container-image-build.outputs.deployableRepository }}
-      deployableTag:
-        description: Most unique deployable tag, e.g. 1.2.3 or latest-dev
-        value: ${{ jobs.container-image-build.outputs.deployableTag }}
 
 jobs:
   container-image-build:
@@ -64,12 +61,11 @@ jobs:
     #https://docs.github.com/en/actions/using-jobs/assigning-permissions-to-jobs
     outputs:
       deployableRepository: ${{ steps.setupvars.outputs.deployableRepository }}
-      deployableTag: ${{ steps.build.outputs.deployableTag }}
     steps:
       - uses: actions/checkout@v4
 
-      #Note: below needs to be tidied and tested with other repos
-      - name: set vars (1 of 3)
+      #Note: below 'set vars' needs to be tidied and tested with other repos
+      - name: set vars
         id: setupvars
         run: |
           REPOSITORY=${{ inputs.repository }}
@@ -101,24 +97,6 @@ jobs:
           echo "TAG=$TAG" >> $GITHUB_ENV
           echo "REGISTRY=${{ inputs.registry }}" >> $GITHUB_ENV
 
-      - name: set vars (2 of 3)
-        if: github.ref != '${{ inputs.defaultBranch }}' #feature branch use devTagOverride
-        run: |
-          OVERRIDE_TAG=${{ inputs.devTagOverride }}
-          OVERRIDE_TAG=${OVERRIDE_TAG,,}
-          echo "OVERRIDE_TAG=$OVERRIDE_TAG" >> $GITHUB_ENV
-
-          echo "IMAGE_PUSH=${{ inputs.pushOverride }}" >> $GITHUB_ENV
-
-      - name: set vars (3 of 3)
-        if: github.ref == '${{ inputs.defaultBranch }}' #default branch use tagOverride
-        run: |
-          OVERRIDE_TAG=${{ inputs.tagOverride }}
-          OVERRIDE_TAG=${OVERRIDE_TAG,,}
-          echo "OVERRIDE_TAG=$OVERRIDE_TAG" >> $GITHUB_ENV
-
-          echo "IMAGE_PUSH=true" >> $GITHUB_ENV
-
       - name: docker login ${{ inputs.registry }}
         run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login $REGISTRY -u ${{ github.actor }} --password-stdin
 
@@ -127,39 +105,38 @@ jobs:
         run: |
           docker buildx create --name multiarchtest --use
 
-          OPT_TAG=()
-          if [ ! -z "$OVERRIDE_TAG" ]; then
-            OPT_TAG=(-t "$REGISTRY/$REPOSITORY:$OVERRIDE_TAG")
-            echo "deployableTag=$OVERRIDE_TAG" >> $GITHUB_OUTPUT
+          TAGS=()
+          TAGS+=(-t "$REGISTRY/$REPOSITORY:$TAG")
+          if [ '${{ github.ref }}' == '${{ inputs.defaultBranch }}' ]; then
+            ADDITIONAL_TAG=${{ inputs.defaultBranchTag }}
+            IMAGE_PUSH=true
           else
-            echo "deployableTag=$TAG" >> $GITHUB_OUTPUT
+            ADDITIONAL_TAG=${{ inputs.featureBranchTag }}
+            IMAGE_PUSH=${{ inputs.pushOverride }}
           fi
+          ADDITIONAL_TAG=${ADDITIONAL_TAG,,}
+          TAGS+=(-t "$REGISTRY/$REPOSITORY:$ADDITIONAL_TAG")
 
-          OPT_PUSH=()
+          ARGS=()
           if [ "$IMAGE_PUSH" == "true" ]; then
-            OPT_PUSH=(--push)
+            ARGS+=(--push)
           fi
-
-          OPT_BUILDARGS=()
-          if [ ! -z "${{ inputs.buildArgs }}" ]; then
-            OPT_BUILDARGS=(${{ inputs.buildArgs }})
+          if [ ! -z "${{ inputs.args }}" ]; then
+            ARGS+=(${{ inputs.args }})
           fi
 
           echo "REGISTRY=$REGISTRY"
           echo "REPOSITORY=$REPOSITORY"
           echo "TAG=$TAG"
-          echo "OVERRIDE_TAG=$OVERRIDE_TAG"
-          echo "OPT_TAG=${OPT_TAG[@]}"
+          echo "TAGS=${TAGS[@]}"
           echo "IMAGE_PUSH=$IMAGE_PUSH"
-          echo "OPT_PUSH=${OPT_PUSH[@]}"
-          echo "buildArgs=${{ inputs.buildArgs }}"
-          echo "OPT_BUILDARGS=${OPT_BUILDARGS[@]}"
+          echo "args=${{ inputs.args }}"
+          echo "ARGS=${ARGS[@]}"
           echo "DockerFile=${{ inputs.dockerfile }}"
 
           docker buildx build \
             -f "${{ inputs.dockerfile }}" \
-            -t "$REGISTRY/$REPOSITORY:$TAG" \
-            "${OPT_TAG[@]}" \
+            "${TAGS[@]}" \
             --label "GITHUB_RUN_ID=${{ github.run_id }}" \
             --label "IMAGE_NAME=$IMAGE_NAME" \
             --label "org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}" \
@@ -172,6 +149,5 @@ jobs:
             --build-arg GITHUB_RUN_NUMBER=${{ github.run_number }} \
             --platform ${{ inputs.platform }} \
             --pull \
-            "${OPT_PUSH[@]}" \
-            "${OPT_BUILDARGS[@]}" \
+            "${ARGS[@]}" \
             .
