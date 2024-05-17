@@ -2,47 +2,58 @@ name: test
 
 on:
   workflow_dispatch:
+    inputs:
+      test-true:
+        required: false
+        type: boolean
+        default: true
+      test-false:
+        required: false
+        type: boolean
+        default: true
   workflow_call:
     inputs:
-      move-major-tag:
-        description: Create and/or move major version tag, i.e. when creating v1.0.2 then move v1 tag up from the v1.0.1 commit.
+      test-true:
         required: false
         type: boolean
         default: true
 
 jobs:
-  gha-release-versioning:
+  test:
     runs-on: ubuntu-latest
     steps:
-
+      #workflow_dispatch fails
       - name: test1
-        if: github.event.inputs.move-major-tag == true
+        if: github.event.inputs.test-true == true
         run: |
           echo 'hello world'
 
+      #workflow_dispatch works
       - name: test2
-        if: github.event.inputs.move-major-tag == 'true'
+        if: github.event.inputs.test-true == 'true'
         run: |
           echo 'hello world'
 
-      #works!
+      #workflow_dispatch works
       - name: test3
-        if: inputs.move-major-tag == true
+        if: inputs.test-true == true
         run: |
           echo 'hello world'
 
+      #workflow_dispatch fails
       - name: test4
-        if: inputs.move-major-tag == 'true'
+        if: inputs.test-true == 'true'
         run: |
           echo 'hello world'
-  
+
+      #workflow_dispatch works
       - name: test5
-        if: ${{ github.event.inputs.move-major-tag }}
+        if: ${{ github.event.inputs.test-true }}
         run: |
           echo 'hello world'
   
-      #works!
+      #workflow_dispatch works
       - name: test6
-        if: ${{ inputs.move-major-tag }}
+        if: ${{ inputs.test-true }}
         run: |
           echo 'hello world'

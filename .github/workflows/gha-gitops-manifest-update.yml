@@ -5,23 +5,31 @@ on:
     inputs:
       registry:
         type: string
-        description: e.g. ghcr.io, docker.io, xyz.azurecr.io
+        description: e.g. ghcr.io/gh-user, xyz.azurecr.io or docker.io
         required: true
       repository:
         type: string
-        description: e.g. my-image-name
+        description: Accepts multiple deployment names when separated by a space e.g. deploy1 deploy2 deploy3
         required: true
+      repository-prefix:
+        type: string
+        description: e.g. prefix/
+        default: ''
       tag:
         type: string
         description: e.g. latest, latest-dev, 1.2.3
         required: true
-      gitops-repository:
+      git-repository:
         type: string
-        description: e.g. f2calv/PROJECT_K8S
+        description: e.g. gh-user/my-repo-name
         default: ${{ github.repository }}
-      yaml-deployment-path:
+      manifest:
         type: string
-        description: e.g. src/workloads/mydeployment.yaml
+        description: Accepts multiple manifest names (without file extension) when separated by a space e.g. deploy1 deploy2 deploy3 (deploy1.yaml etc...)
+        required: true
+      manifest-path:
+        type: string
+        description: e.g. src/workloads
         required: true
       fullSemVer:
         type: string
@@ -36,7 +44,7 @@ on:
         description: e.g. tom@topgun.com
         required: true
     secrets:
-      gitops-repository-token:
+      git-repository-token:
         description: Git repository authentication token.
         required: true
 
@@ -47,8 +55,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          repository: ${{ inputs.gitops-repository }}
-          token: ${{ secrets.gitops-repository-token }}
+          repository: ${{ inputs.git-repository }}
+          token: ${{ secrets.git-repository-token }}
 
       #Note: below workflow code left in place to show how to access a local action from inside a reuseable workflow, i.e. messy!
       # - uses: actions/checkout@v4
@@ -62,8 +70,10 @@ jobs:
         with:
           registry: ${{ inputs.registry }}
           repository: ${{ inputs.repository }}
+          repository-prefix: ${{ inputs.repository-prefix }}
           tag: ${{ inputs.tag }}
-          yaml-deployment-path: ${{ inputs.yaml-deployment-path }}
+          manifest: ${{ inputs.manifest }}
+          manifest-path: ${{ inputs.manifest-path }}
           fullSemVer: ${{ inputs.fullSemVer }}
           git-user-name: ${{ inputs.git-user-name }}
           git-user-email: ${{ inputs.git-user-email }}
