@@ -2,13 +2,17 @@ name: test
 
 on:
   workflow_dispatch:
-  workflow_call:
     inputs:
-      move-major-tag:
-        description: Create and/or move major version tag, i.e. when creating v1.0.2 then move v1 tag up from the v1.0.1 commit.
+      test-true:
         required: false
         type: boolean
         default: true
+      test-false:
+        required: false
+        type: boolean
+        default: true
+  workflow_call:
+    inputs:
       test-true:
         required: false
         type: boolean
