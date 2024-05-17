@@ -58,7 +58,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      #Note: below 'set vars' needs to be tidied and tested with other repos
       - name: set vars
         id: setupvars
         run: |
