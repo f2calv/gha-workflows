@@ -11,6 +11,10 @@ on:
         type: string
         description: Accepts multiple deployment names when separated by a space e.g. deploy1 deploy2 deploy3
         required: true
+      repository-prefix:
+        type: string
+        description: e.g. prefix/
+        default: ''
       tag:
         type: string
         description: e.g. latest, latest-dev, 1.2.3
@@ -58,11 +62,12 @@ jobs:
       #     path: workflows
 
       - #uses: f2calv/gha-gitops-manifest-update@v1
-      uses: f2calv/gha-gitops-manifest-update@f2calv/2024-05-knx-updates
+        uses: f2calv/gha-gitops-manifest-update@f2calv/2024-05-knx-updates
         #uses: ./workflows/.github/actions/gha-gitops-manifest-update
         with:
           registry: ${{ inputs.registry }}
           repository: ${{ inputs.repository }}
+          repository-prefix: ${{ inputs.repository-prefix }}
           tag: ${{ inputs.tag }}
           manifest-path: ${{ inputs.manifest-path }}
           fullSemVer: ${{ inputs.fullSemVer }}
