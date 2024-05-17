@@ -39,7 +39,6 @@ on:
         description: i.e. 1.2.3-feature-my-feature.12
         value: ${{ jobs.gha-release-versioning.outputs.fullSemVer }}
 
-
 jobs:
   gha-release-versioning:
     runs-on: ubuntu-latest
