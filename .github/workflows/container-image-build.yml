@@ -14,7 +14,7 @@ on:
         default: ''
       repository-prefix:
         type: string
-        description: e.g. cas/
+        description: e.g. prefix/
         default: ''
       dockerfile:
         type: string

@@ -12,11 +12,11 @@ on:
         description: If unset we use the name of the current Git repository.
       repository-prefix:
         type: string
-        description: e.g. cas/
+        description: e.g. prefix/
         default: ''
       chart-repository-prefix:
         type: string
-        description: e.g. cas/charts/
+        description: e.g. prefix/charts/
         default: ''
       tag:
         type: string
