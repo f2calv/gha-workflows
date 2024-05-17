@@ -36,10 +36,6 @@ on:
         type: string
         description: Specify the target platform for the build output, e.g. linux/amd64,linux/arm64,linux/arm/v7
         default: linux/amd64,linux/arm64,linux/arm/v7
-      pushOverride:
-        type: boolean
-        description: Image push happens *only* from builds on the default branch, override by setting 'true'
-        default: false
       args:
         type: string
         description: Used to pass optional build arguments.
@@ -94,18 +90,14 @@ jobs:
           TAGS+=(-t "$REGISTRY/$REPOSITORY:$TAG")
           if [ '${{ github.ref }}' == '${{ inputs.defaultBranch }}' ]; then
             ADDITIONAL_TAG=${{ inputs.defaultBranchTag }}
-            IMAGE_PUSH=true
           else
             ADDITIONAL_TAG=${{ inputs.featureBranchTag }}
-            IMAGE_PUSH=${{ inputs.pushOverride }}
           fi
           ADDITIONAL_TAG=${ADDITIONAL_TAG,,}
           TAGS+=(-t "$REGISTRY/$REPOSITORY:$ADDITIONAL_TAG")
 
           ARGS=()
-          if [ "$IMAGE_PUSH" == "true" ]; then
-            ARGS+=(--push)
-          fi
+          ARGS+=(--push)
           if [ ! -z "${{ inputs.args }}" ]; then
             ARGS+=(${{ inputs.args }})
           fi
@@ -114,7 +106,6 @@ jobs:
           echo "REPOSITORY=$REPOSITORY"
           echo "TAG=$TAG"
           echo "TAGS=${TAGS[@]}"
-          echo "IMAGE_PUSH=$IMAGE_PUSH"
           echo "args=${{ inputs.args }}"
           echo "ARGS=${ARGS[@]}"
           echo "DockerFile=${{ inputs.dockerfile }}"
