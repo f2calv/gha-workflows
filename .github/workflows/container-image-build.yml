@@ -48,10 +48,6 @@ on:
         type: string
         description: Workflow behaves differently on the default branch.
         default: refs/heads/main
-    outputs:
-      deployableRepository:
-        description: Deployable repository name, e.g. lowercase owner/repo-name
-        value: ${{ jobs.container-image-build.outputs.deployableRepository }}
 
 jobs:
   container-image-build:
@@ -59,8 +55,6 @@ jobs:
     if: github.actor != 'depbot'
     #https://github.blog/changelog/2021-04-20-github-actions-control-permissions-for-github_token/
     #https://docs.github.com/en/actions/using-jobs/assigning-permissions-to-jobs
-    outputs:
-      deployableRepository: ${{ steps.setupvars.outputs.deployableRepository }}
     steps:
       - uses: actions/checkout@v4
 
@@ -90,7 +84,6 @@ jobs:
             REPOSITORY=${REPOSITORY,,}
           fi
           echo "REPOSITORY=${{ inputs.repository-prefix }}$REPOSITORY" >> $GITHUB_ENV
-          echo "deployableRepository=${{ inputs.repository-prefix }}$REPOSITORY" >> $GITHUB_OUTPUT
 
           TAG=${{ inputs.tag }}
           TAG=${TAG,,}
