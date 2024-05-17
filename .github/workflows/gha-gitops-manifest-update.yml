@@ -17,7 +17,7 @@ on:
         required: true
       gitops-repository:
         type: string
-        description: e.g. f2calv/PROJECT_K8S
+        description: e.g. gh-user/my-repo-name
         default: ${{ github.repository }}
       yaml-deployment-path:
         type: string

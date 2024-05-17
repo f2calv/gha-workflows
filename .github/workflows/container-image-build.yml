@@ -10,7 +10,7 @@ on:
         required: true
       repository:
         type: string
-        description: If empty the repository will derive from name of the repo, i.e. f2calv/my-repo-name
+        description: If empty the repository will derive from name of the repo, i.e. gh-user/my-repo-name
         default: ''
       repository-prefix:
         type: string
