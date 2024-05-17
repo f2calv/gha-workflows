@@ -19,7 +19,7 @@ on:
         type: string
         description: e.g. latest, latest-dev, 1.2.3
         required: true
-      gitops-repository:
+      git-repository:
         type: string
         description: e.g. gh-user/my-repo-name
         default: ${{ github.repository }}
@@ -44,7 +44,7 @@ on:
         description: e.g. tom@topgun.com
         required: true
     secrets:
-      gitops-repository-token:
+      git-repository-token:
         description: Git repository authentication token.
         required: true
 
@@ -55,8 +55,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          repository: ${{ inputs.gitops-repository }}
-          token: ${{ secrets.gitops-repository-token }}
+          repository: ${{ inputs.git-repository }}
+          token: ${{ secrets.git-repository-token }}
 
       #Note: below workflow code left in place to show how to access a local action from inside a reuseable workflow, i.e. messy!
       # - uses: actions/checkout@v4
