@@ -23,6 +23,10 @@ on:
         type: string
         description: e.g. gh-user/my-repo-name
         default: ${{ github.repository }}
+      manifest:
+        type: string
+        description: Accepts multiple manifest names (without file extension) when separated by a space e.g. deploy1 deploy2 deploy3 (deploy1.yaml etc...)
+        required: true
       manifest-path:
         type: string
         description: e.g. src/workloads
@@ -69,6 +73,7 @@ jobs:
           repository: ${{ inputs.repository }}
           repository-prefix: ${{ inputs.repository-prefix }}
           tag: ${{ inputs.tag }}
+          manifest: ${{ inputs.manifest }}
           manifest-path: ${{ inputs.manifest-path }}
           fullSemVer: ${{ inputs.fullSemVer }}
           git-user-name: ${{ inputs.git-user-name }}
