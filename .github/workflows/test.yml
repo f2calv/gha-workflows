@@ -9,6 +9,14 @@ on:
         required: false
         type: boolean
         default: true
+      test-true:
+        required: false
+        type: boolean
+        default: true
+      test-false:
+        required: false
+        type: boolean
+        default: true
 
 jobs:
   gha-release-versioning:
@@ -16,33 +24,33 @@ jobs:
     steps:
 
       - name: test1
-        if: github.event.inputs.move-major-tag == true
+        if: github.event.inputs.test-true == true
         run: |
           echo 'hello world'
 
       - name: test2
-        if: github.event.inputs.move-major-tag == 'true'
+        if: github.event.inputs.test-true == 'true'
         run: |
           echo 'hello world'
 
       #works!
       - name: test3
-        if: inputs.move-major-tag == true
+        if: inputs.test-true == true
         run: |
           echo 'hello world'
 
       - name: test4
-        if: inputs.move-major-tag == 'true'
+        if: inputs.test-true == 'true'
         run: |
           echo 'hello world'
   
       - name: test5
-        if: ${{ github.event.inputs.move-major-tag }}
+        if: ${{ github.event.inputs.test-true }}
         run: |
           echo 'hello world'
   
       #works!
       - name: test6
-        if: ${{ inputs.move-major-tag }}
+        if: ${{ inputs.test-true }}
         run: |
           echo 'hello world'
