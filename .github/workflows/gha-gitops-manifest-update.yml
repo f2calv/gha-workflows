@@ -65,8 +65,7 @@ jobs:
       #     ref: ${{ github.ref_name }} #Note: assumes that the ref repo has an identical branch name to the calling branch
       #     path: workflows
 
-      - #uses: f2calv/gha-gitops-manifest-update@v1
-        uses: f2calv/gha-gitops-manifest-update@f2calv/2024-05-knx-updates
+      - uses: f2calv/gha-gitops-manifest-update@v1
         #uses: ./workflows/.github/actions/gha-gitops-manifest-update
         with:
           registry: ${{ inputs.registry }}
