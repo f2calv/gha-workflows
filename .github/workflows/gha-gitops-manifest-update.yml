@@ -5,11 +5,11 @@ on:
     inputs:
       registry:
         type: string
-        description: e.g. ghcr.io, docker.io, xyz.azurecr.io
+        description: e.g. ghcr.io/gh-user, xyz.azurecr.io or docker.io
         required: true
       repository:
         type: string
-        description: e.g. my-image-name
+        description: Accepts multiple deployment names when separated by a space e.g. deploy1 deploy2 deploy3
         required: true
       tag:
         type: string
@@ -21,7 +21,7 @@ on:
         default: ${{ github.repository }}
       yaml-deployment-path:
         type: string
-        description: e.g. src/workloads/mydeployment.yaml
+        description: e.g. src/workloads/deploy1.yaml
         required: true
       fullSemVer:
         type: string

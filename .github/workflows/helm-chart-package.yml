@@ -5,7 +5,7 @@ on:
     inputs:
       registry:
         type: string
-        description: e.g. ghcr.io/username, xyz.azurecr.io or docker.io
+        description: e.g. ghcr.io/gh-user, xyz.azurecr.io or docker.io
         required: true
       repository:
         type: string
