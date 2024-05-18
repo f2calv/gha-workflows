@@ -25,11 +25,11 @@ on:
         description: e.g. 1.2.301-feature-my-feature.12
         required: true
       tag-major:
-        type: number
+        type: string
         description: e.g. if the tag is 1.2.301-feature-my-feature.12 then the major version is 1.
         required: true
       tag-minor:
-        type: number
+        type: string
         description: e.g. if the tag is 1.2.301-feature-my-feature.12 then the minor version is 2.
         required: true
       defaultBranchTag:
