@@ -32,10 +32,6 @@ on:
         type: number
         description: e.g. if the tag is 1.2.301-feature-my-feature.12 then the minor version is 2.
         required: true
-      tag-patch:
-        type: number
-        description: e.g. if the tag is 1.2.301-feature-my-feature.12 then the patch version is 301.
-        required: true
       defaultBranchTag:
         type: string
         description: Default branch tag, e.g. latest
@@ -105,14 +101,11 @@ jobs:
           docker buildx create --name multiarchtest --use
 
           TAGS=()
-          TAGS+=(-t "$REGISTRY/$REPOSITORY:${{ inputs.tag-major }}")
-          TAGS+=(-t "$REGISTRY/$REPOSITORY:${{ inputs.tag-major }}.${{ inputs.tag-minor }}")
-          if [ '$TAG' != '${{ inputs.tag-major }}.${{ inputs.tag-minor }}.${{ inputs.tag-patch }}' ]; then
-            TAGS+=(-t "$REGISTRY/$REPOSITORY:${{ inputs.tag-major }}.${{ inputs.tag-minor }}.${{ inputs.tag-patch }}")
-          fi
           TAGS+=(-t "$REGISTRY/$REPOSITORY:$TAG")
           if [ '${{ github.ref }}' == '${{ inputs.defaultBranch }}' ]; then
             ADDITIONAL_TAG=${{ inputs.defaultBranchTag }}
+            TAGS+=(-t "$REGISTRY/$REPOSITORY:${{ inputs.tag-major }}")
+            TAGS+=(-t "$REGISTRY/$REPOSITORY:${{ inputs.tag-major }}.${{ inputs.tag-minor }}")
           else
             ADDITIONAL_TAG=${{ inputs.featureBranchTag }}
           fi
