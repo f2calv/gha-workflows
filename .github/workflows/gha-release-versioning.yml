@@ -6,7 +6,7 @@ on:
   workflow_call:
     inputs:
       # GITHUB_TOKEN:
-      #   description: i.e. secrets.GITHUB_TOKEN
+      #   description: e.g. USD{{ secrets.GITHUB_TOKEN }}
       #   required: true
       #   type: string
       #Note: We don't need to pass in GITHUB_TOKEN to a reusable workflow. When a reusable workflow is triggered by a caller workflow, the github context is always associated with the caller workflow. The called workflow is automatically granted access to github.token and secrets.GITHUB_TOKEN.
@@ -17,12 +17,12 @@ on:
         type: string
         default: ''
       tag-prefix:
-        description: Prefix the semver, i.e. 1.0.1 or v1.0.1
+        description: Prefix the semver, e.g. 1.0.1 or v1.0.1
         required: false
         type: string
         default: v
       move-major-tag:
-        description: Create and/or move major version tag, i.e. when creating v1.0.2 then move v1 tag up from the v1.0.1 commit.
+        description: Create and/or move major version tag, e.g. when creating v1.0.2 then move v1 tag up from the v1.0.1 commit.
         required: false
         type: boolean
         default: true
@@ -33,11 +33,20 @@ on:
         default: true
     outputs:
       semVer:
-        description: i.e. 1.2.3
+        description: e.g. 1.2.301
         value: ${{ jobs.gha-release-versioning.outputs.semVer }}
       fullSemVer:
-        description: i.e. 1.2.3-feature-my-feature.12
+        description: e.g. 1.2.301-feature-my-feature.12
         value: ${{ jobs.gha-release-versioning.outputs.fullSemVer }}
+      major:
+        description: e.g. 1
+        value: ${{ jobs.gha-release-versioning.outputs.major }}
+      minor:
+        description: e.g. 2
+        value: ${{ jobs.gha-release-versioning.outputs.minor }}
+      patch:
+        description: e.g. 301
+        value: ${{ jobs.gha-release-versioning.outputs.patch }}
 
 jobs:
   gha-release-versioning:
@@ -45,6 +54,9 @@ jobs:
     outputs:
       semVer: ${{ steps.gha-release-versioning.outputs.semVer }}
       fullSemVer: ${{ steps.gha-release-versioning.outputs.fullSemVer }}
+      major: ${{ steps.gha-release-versioning.outputs.major }}
+      minor: ${{ steps.gha-release-versioning.outputs.minor }}
+      patch: ${{ steps.gha-release-versioning.outputs.patch }}
     steps:
       - uses: actions/checkout@v4
         with:
