@@ -6,7 +6,7 @@ on:
   workflow_call:
     inputs:
       # GITHUB_TOKEN:
-      #   description: e.g. ${{ secrets.GITHUB_TOKEN }}
+      #   description: e.g. USD{{ secrets.GITHUB_TOKEN }}
       #   required: true
       #   type: string
       #Note: We don't need to pass in GITHUB_TOKEN to a reusable workflow. When a reusable workflow is triggered by a caller workflow, the github context is always associated with the caller workflow. The called workflow is automatically granted access to github.token and secrets.GITHUB_TOKEN.
