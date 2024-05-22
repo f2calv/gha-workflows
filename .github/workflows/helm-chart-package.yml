@@ -46,6 +46,7 @@ jobs:
           npm install --global json5
           json5 -c .devcontainer/devcontainer.json
           VERSION_TO_INSTALL=$(cat .devcontainer/devcontainer.json | jq -r '.features[] | select(.helm | . != null).helm')
+          git restore .devcontainer/devcontainer.json
           echo "VERSION_TO_INSTALL=$VERSION_TO_INSTALL" >> $GITHUB_ENV
           echo "VERSION_TO_INSTALL=$VERSION_TO_INSTALL"
 
