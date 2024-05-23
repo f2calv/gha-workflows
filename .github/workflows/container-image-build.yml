@@ -32,11 +32,11 @@ on:
         type: string
         description: If the tag is 1.2.301-feature-my-feature.12 then pass in only the minor version, e.g. 2
         required: true
-      defaultBranchTag:
+      default-branch-tag:
         type: string
         description: Default branch tag, e.g. latest
         default: latest
-      featureBranchTag:
+      feature-branch-tag:
         type: string
         description: Feature branch tag, e.g. latest-dev
         default: latest-dev
@@ -48,7 +48,7 @@ on:
         type: string
         description: Used to pass optional build arguments.
         default: ''
-      defaultBranch:
+      default-branch:
         type: string
         description: Workflow behaves differently on the default branch.
         default: refs/heads/main
@@ -102,12 +102,12 @@ jobs:
 
           TAGS=()
           TAGS+=(-t "$REGISTRY/$REPOSITORY:$TAG")
-          if [ '${{ github.ref }}' == '${{ inputs.defaultBranch }}' ]; then
-            ADDITIONAL_TAG=${{ inputs.defaultBranchTag }}
+          if [ '${{ github.ref }}' == '${{ inputs.default-branch }}' ]; then
+            ADDITIONAL_TAG=${{ inputs.default-branch-tag }}
             TAGS+=(-t "$REGISTRY/$REPOSITORY:${{ inputs.tag-major }}")
             TAGS+=(-t "$REGISTRY/$REPOSITORY:${{ inputs.tag-major }}.${{ inputs.tag-minor }}")
           else
-            ADDITIONAL_TAG=${{ inputs.featureBranchTag }}
+            ADDITIONAL_TAG=${{ inputs.feature-branch-tag }}
           fi
           ADDITIONAL_TAG=${ADDITIONAL_TAG,,}
           TAGS+=(-t "$REGISTRY/$REPOSITORY:$ADDITIONAL_TAG")
