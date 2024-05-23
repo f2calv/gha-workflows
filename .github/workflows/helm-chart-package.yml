@@ -96,6 +96,18 @@ jobs:
           if [ "${{ inputs.is-library-chart }}" == "false" ]; then
             printf "\n\nUpdate the repository in the values.yaml before packaging...\n"
             yq -i '.image.repository = env(REPOSITORY)' $CHART_PATH/values.yaml
+            yq -i '.image.tag = env(TAG)' $CHART_PATH/values.yaml
+
+            printf "\n\nAdd git repository context in the values.yaml before packaging...\n"
+            yq -i '.git.repository=env(GITHUB_REPOSITORY)' $CHART_PATH/values.yaml
+            yq -i '.git.branch=env(GITHUB_REF)' $CHART_PATH/values.yaml
+            yq -i '.git.commit=env(GITHUB_SHA)' $CHART_PATH/values.yaml
+
+            printf "\n\nAdd github context in the values.yaml before packaging...\n"
+            yq -i '.github.workflow=env(GITHUB_WORKFLOW)' $CHART_PATH/values.yaml
+            yq -i '.github.run_id=env(GITHUB_RUN_ID)' $CHART_PATH/values.yaml
+            yq -i '.github.run_number=env(GITHUB_RUN_NUMBER)' $CHART_PATH/values.yaml
+
             cat $CHART_PATH/values.yaml
           fi
 
@@ -119,17 +131,7 @@ jobs:
           if [ "${{ inputs.is-library-chart }}" == "false" ]; then
             #https://helm.sh/docs/helm/helm_template/
             printf "\n\nhelm template to show the fully expanded manifest...\n"
-            helm template $CHART_NAME $CHART_PATH \
-                --version "$TAG" \
-                --set image.tag="$TAG" \
-                --set image.repository=$REPOSITORY \
-                --set run_id="${{ github.run_id }}" \
-                --set run_number="${{ github.run_number }}" \
-                --set workflow="${{ github.workflow }}" \
-                --set branch="${{ github.ref }}" \
-                --set commit="${{ github.sha }}" \
-                --set repo="${{ github.repository }}" \
-                > ${{ github.workspace }}/artifacts/$CHART_NAME.yaml
+            helm template $CHART_NAME $CHART_PATH > ${{ github.workspace }}/artifacts/$CHART_NAME.yaml
             cat ${{ github.workspace }}/artifacts/$CHART_NAME.yaml
           fi
 
