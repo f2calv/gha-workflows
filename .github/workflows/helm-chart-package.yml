@@ -97,13 +97,15 @@ jobs:
             printf "\n\nUpdate the repository in the values.yaml before packaging...\n"
             yq -i '.image.repository = env(REPOSITORY)' $CHART_PATH/values.yaml
 
-            printf "\n\nAdd core github context in the values.yaml before packaging...\n"
+            printf "\n\nAdd git repository context in the values.yaml before packaging...\n"
+            yq -i '.git.repository=env(GITHUB_REPOSITORY)' $CHART_PATH/values.yaml
+            yq -i '.git.branch=env(GITHUB_REF)' $CHART_PATH/values.yaml
+            yq -i '.git.commit=env(GITHUB_SHA)' $CHART_PATH/values.yaml
+
+            printf "\n\nAdd github context in the values.yaml before packaging...\n"
+            yq -i '.github.workflow=env(GITHUB_WORKFLOW)' $CHART_PATH/values.yaml
             yq -i '.github.run_id=env(GITHUB_RUN_ID)' $CHART_PATH/values.yaml
             yq -i '.github.run_number=env(GITHUB_RUN_NUMBER)' $CHART_PATH/values.yaml
-            yq -i '.github.workflow=env(GITHUB_WORKFLOW)' $CHART_PATH/values.yaml
-            yq -i '.github.ref=env(GITHUB_REF)' $CHART_PATH/values.yaml
-            yq -i '.github.sha=env(GITHUB_SHA)' $CHART_PATH/values.yaml
-            yq -i '.github.repository=env(GITHUB_REPOSITORY)' $CHART_PATH/values.yaml
 
             cat $CHART_PATH/values.yaml
           fi
