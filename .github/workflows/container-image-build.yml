@@ -52,12 +52,10 @@ on:
         type: string
         description: Workflow behaves differently on the default branch.
         default: refs/heads/main
-
-      #TODO: this...
-      # pushOnlyOnDefaultBranch:
-      #   type: boolean
-      #   description: Only push when on the default branch.
-      #   default: false
+      push-image:
+        type: boolean
+        description: By default always push the newly built container image.
+        default: true
 
 jobs:
   container-image-build:
@@ -113,7 +111,9 @@ jobs:
           TAGS+=(-t "$REGISTRY/$REPOSITORY:$ADDITIONAL_TAG")
 
           ARGS=()
-          ARGS+=(--push)
+          if [ '${{ inputs.push-image }}' == 'true' ]; then
+            ARGS+=(--push)
+          fi
           if [ ! -z "${{ inputs.args }}" ]; then
             ARGS+=(${{ inputs.args }})
           fi
