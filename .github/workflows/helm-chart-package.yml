@@ -96,6 +96,7 @@ jobs:
           if [ "${{ inputs.is-library-chart }}" == "false" ]; then
             printf "\n\nUpdate the repository in the values.yaml before packaging...\n"
             yq -i '.image.repository = env(REPOSITORY)' $CHART_PATH/values.yaml
+            yq -i '.image.tag = env(TAG)' $CHART_PATH/values.yaml
 
             printf "\n\nAdd git repository context in the values.yaml before packaging...\n"
             yq -i '.git.repository=env(GITHUB_REPOSITORY)' $CHART_PATH/values.yaml
