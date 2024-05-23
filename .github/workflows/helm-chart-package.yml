@@ -97,12 +97,13 @@ jobs:
             printf "\n\nUpdate the repository in the values.yaml before packaging...\n"
             yq -i '.image.repository = env(REPOSITORY)' $CHART_PATH/values.yaml
 
-            yq -i '. |= select(.name == "github.run_id").value=env(GITHUB_RUN_ID)' $CHART_PATH/values.yaml
-            yq -i '. |= select(.name == "github.run_number").value=env(GITHUB_RUN_NUMBER)' $CHART_PATH/values.yaml
-            yq -i '. |= select(.name == "github.workflow").value=env(GITHUB_WORKFLOW)' $CHART_PATH/values.yaml
-            yq -i '. |= select(.name == "github.ref").value=env(GITHUB_REF)' $CHART_PATH/values.yaml
-            yq -i '. |= select(.name == "github.sha").value=env(GITHUB_SHA)' $CHART_PATH/values.yaml
-            yq -i '. |= select(.name == "github.repository").value=env(GITHUB_REPOSITORY)' $CHART_PATH/values.yaml
+            printf "\n\nAdd core github context in the values.yaml before packaging...\n"
+            yq -i '.github += select(.name == "github.run_id").value=env(GITHUB_RUN_ID)' $CHART_PATH/values.yaml
+            yq -i '.github += select(.name == "github.run_number").value=env(GITHUB_RUN_NUMBER)' $CHART_PATH/values.yaml
+            yq -i '.github += select(.name == "github.workflow").value=env(GITHUB_WORKFLOW)' $CHART_PATH/values.yaml
+            yq -i '.github += select(.name == "github.ref").value=env(GITHUB_REF)' $CHART_PATH/values.yaml
+            yq -i '.github += select(.name == "github.sha").value=env(GITHUB_SHA)' $CHART_PATH/values.yaml
+            yq -i '.github += select(.name == "github.repository").value=env(GITHUB_REPOSITORY)' $CHART_PATH/values.yaml
 
             cat $CHART_PATH/values.yaml
           fi
