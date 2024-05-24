@@ -71,17 +71,15 @@ jobs:
         run: |
           REPOSITORY=${{ inputs.repository }}
 
-          if [ ! -z '$REPOSITORY' ]; then
-            #lowercase the input
-            REPOSITORY=${REPOSITORY,,}
-            IMAGE_NAME=${REPOSITORY,,}
-          else
+          if [ -z '$REPOSITORY' ]; then
             #set the repository to the current gh repository, then strip the repository_owner away
             REPOSITORY=${{ github.repository }}
             REPOSITORY=$(echo $REPOSITORY | sed "s|${{ github.repository_owner }}\/||g")
-            REPOSITORY=${REPOSITORY,,}
-            IMAGE_NAME=${REPOSITORY,,}
           fi
+          #lowercase
+          REPOSITORY=${REPOSITORY,,}
+          IMAGE_NAME=${REPOSITORY,,}
+
           echo "IMAGE_NAME=$IMAGE_NAME" >> $GITHUB_ENV
           echo "REPOSITORY=${{ inputs.repository-prefix }}$REPOSITORY" >> $GITHUB_ENV
 
