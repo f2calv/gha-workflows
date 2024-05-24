@@ -13,7 +13,7 @@ These workflows cover a number of common scenarios that I face across my public/
 
 - [Container Image Build](.github/workflows/container-image-build.yml)
 - [Helm Chart Package](.github/workflows/helm-chart-package.yml)
-- [GitOps Manifest Update](.github/workflows/gha-gitops-manifest-update.yml)
+- [GitOps Manifest Update](.github/workflows/gha-gitops-manifest-update.yml) (simply a to execute single action in a workflow)
 
 ## GitHub Packages: NuGet
 
