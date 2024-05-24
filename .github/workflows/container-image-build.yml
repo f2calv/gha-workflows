@@ -89,7 +89,7 @@ jobs:
           echo "REGISTRY=${{ inputs.registry }}" >> $GITHUB_ENV
 
       - name: docker login ${{ inputs.registry }}
-        run: echo '${{ secrets.GITHUB_TOKEN }}' | docker login $REGISTRY -u ${{ github.actor }} --password-stdin
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login $REGISTRY -u ${{ github.actor }} --password-stdin
 
       - name: docker buildx build/push
         id: build
@@ -98,7 +98,7 @@ jobs:
 
           TAGS=()
           TAGS+=(-t "$REGISTRY/$REPOSITORY:$TAG")
-          if [ '${{ github.ref }}' == '${{ inputs.default-branch }}' ]; then
+          if [ "${{ github.ref }}" == "${{ inputs.default-branch }}" ]; then
             ADDITIONAL_TAG=${{ inputs.default-branch-tag }}
             TAGS+=(-t "$REGISTRY/$REPOSITORY:${{ inputs.tag-major }}")
             TAGS+=(-t "$REGISTRY/$REPOSITORY:${{ inputs.tag-major }}.${{ inputs.tag-minor }}")
@@ -109,10 +109,10 @@ jobs:
           TAGS+=(-t "$REGISTRY/$REPOSITORY:$ADDITIONAL_TAG")
 
           ARGS=()
-          if [ '${{ inputs.push-image }}' == 'true' ]; then
+          if [ "${{ inputs.push-image }}" == "true" ]; then
             ARGS+=(--push)
           fi
-          if [ ! -z '${{ inputs.args }}' ]; then
+          if [ ! -z "${{ inputs.args }}" ]; then
             ARGS+=(${{ inputs.args }})
           fi
 
