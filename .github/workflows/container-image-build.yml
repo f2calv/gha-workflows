@@ -32,11 +32,11 @@ on:
         type: string
         description: If the tag is 1.2.301-feature-my-feature.12 then pass in only the minor version, e.g. 2
         required: true
-      defaultBranchTag:
+      default-branch-tag:
         type: string
         description: Default branch tag, e.g. latest
         default: latest
-      featureBranchTag:
+      feature-branch-tag:
         type: string
         description: Feature branch tag, e.g. latest-dev
         default: latest-dev
@@ -48,16 +48,14 @@ on:
         type: string
         description: Used to pass optional build arguments.
         default: ''
-      defaultBranch:
+      default-branch:
         type: string
         description: Workflow behaves differently on the default branch.
         default: refs/heads/main
-
-      #TODO: this...
-      # pushOnlyOnDefaultBranch:
-      #   type: boolean
-      #   description: Only push when on the default branch.
-      #   default: false
+      push-image:
+        type: boolean
+        description: By default always push the newly built container image.
+        default: true
 
 jobs:
   container-image-build:
@@ -73,17 +71,15 @@ jobs:
         run: |
           REPOSITORY=${{ inputs.repository }}
 
-          if [ ! -z "$REPOSITORY" ]; then
-            #lowercase the input
-            REPOSITORY=${REPOSITORY,,}
-            IMAGE_NAME=${REPOSITORY,,}
-          else
+          if [ -z "$REPOSITORY" ]; then
             #set the repository to the current gh repository, then strip the repository_owner away
             REPOSITORY=${{ github.repository }}
             REPOSITORY=$(echo $REPOSITORY | sed "s|${{ github.repository_owner }}\/||g")
-            REPOSITORY=${REPOSITORY,,}
-            IMAGE_NAME=${REPOSITORY,,}
           fi
+          #lowercase
+          REPOSITORY=${REPOSITORY,,}
+          IMAGE_NAME=${REPOSITORY,,}
+
           echo "IMAGE_NAME=$IMAGE_NAME" >> $GITHUB_ENV
           echo "REPOSITORY=${{ inputs.repository-prefix }}$REPOSITORY" >> $GITHUB_ENV
 
@@ -102,18 +98,20 @@ jobs:
 
           TAGS=()
           TAGS+=(-t "$REGISTRY/$REPOSITORY:$TAG")
-          if [ '${{ github.ref }}' == '${{ inputs.defaultBranch }}' ]; then
-            ADDITIONAL_TAG=${{ inputs.defaultBranchTag }}
+          if [ "${{ github.ref }}" == "${{ inputs.default-branch }}" ]; then
+            ADDITIONAL_TAG=${{ inputs.default-branch-tag }}
             TAGS+=(-t "$REGISTRY/$REPOSITORY:${{ inputs.tag-major }}")
             TAGS+=(-t "$REGISTRY/$REPOSITORY:${{ inputs.tag-major }}.${{ inputs.tag-minor }}")
           else
-            ADDITIONAL_TAG=${{ inputs.featureBranchTag }}
+            ADDITIONAL_TAG=${{ inputs.feature-branch-tag }}
           fi
           ADDITIONAL_TAG=${ADDITIONAL_TAG,,}
           TAGS+=(-t "$REGISTRY/$REPOSITORY:$ADDITIONAL_TAG")
 
           ARGS=()
-          ARGS+=(--push)
+          if [ "${{ inputs.push-image }}" == "true" ]; then
+            ARGS+=(--push)
+          fi
           if [ ! -z "${{ inputs.args }}" ]; then
             ARGS+=(${{ inputs.args }})
           fi

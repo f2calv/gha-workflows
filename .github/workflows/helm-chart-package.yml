@@ -30,10 +30,10 @@ on:
         type: boolean
         description: Is the helm chart a library chart?
         default: false
-      defaultBranch:
-        type: string
-        description: Workflow behaves differently on the default branch.
-        default: refs/heads/main
+      push-chart:
+        type: boolean
+        description: By default always push the newly packaged chart.
+        default: true
 
 jobs:
   helm-chart-package:
@@ -79,10 +79,10 @@ jobs:
           echo "REPOSITORY=$REPOSITORY"
           echo "TAG=$TAG"
 
-          printf "\n\nhelm version...\n"
+          printf "\n\n>helm version\n"
           helm version
 
-          printf "\n\nhelm registry login...\n"
+          printf "\n\n>helm registry login $REGISTRY --username ${{ github.repository_owner }} --password-stdin\n"
           printf ${{ secrets.GITHUB_TOKEN }} | helm registry login $REGISTRY --username ${{ github.repository_owner }} --password-stdin
           #printf $servicePrincipalKey | helm registry login $REGISTRY --username $servicePrincipalId --password-stdin
 
@@ -113,36 +113,40 @@ jobs:
 
           #Note: when pulling library charts from private ghcr packages you need to give the pulling repository permission to pull the package
           #https://helm.sh/docs/helm/helm_dependency_update/
-          printf "\n\nhelm dependency update...\n"
+          printf "\n\n>helm dependency update $CHART_PATH\n"
           helm dependency update $CHART_PATH
     
           #https://helm.sh/docs/helm/helm_dependency_list/
-          printf "\n\nhelm dependency list...\n"
+          printf "\n\n>helm dependency list $CHART_PATH\n"
           helm dependency list $CHART_PATH
     
           #https://helm.sh/docs/helm/helm_lint/
-          printf "\n\nhelm lint...\n"
+          printf "\n\n>helm lint $CHART_PATH\n"
           helm lint $CHART_PATH
 
           #https://helm.sh/docs/helm/helm_package/
-          printf "\n\nhelm package...\n"
+          printf "\n\n>helm package $CHART_PATH --destination ${{ github.workspace }}/artifacts/ --app-version $TAG\n"
           helm package $CHART_PATH --destination ${{ github.workspace }}/artifacts/ --app-version $TAG
     
           if [ "${{ inputs.is-library-chart }}" == "false" ]; then
             #https://helm.sh/docs/helm/helm_template/
-            printf "\n\nhelm template to show the fully expanded manifest...\n"
+            printf "\n\n>helm template $CHART_NAME $CHART_PATH > ${{ github.workspace }}/artifacts/$CHART_NAME.yaml\n"
             helm template $CHART_NAME $CHART_PATH > ${{ github.workspace }}/artifacts/$CHART_NAME.yaml
             cat ${{ github.workspace }}/artifacts/$CHART_NAME.yaml
+          else
+            printf "\n\nhelm template skipped...\n"
+          fi
+
+          if [ "${{ inputs.push-chart }}" == "true" ]; then
+            #https://helm.sh/docs/helm/helm_push/
+            printf "\n\n>helm push ${{ github.workspace }}/artifacts/$CHART_NAME-$TAG.tgz oci://$REGISTRY/${{ inputs.chart-repository-prefix }}\n"
+            helm push ${{ github.workspace }}/artifacts/$CHART_NAME-$TAG.tgz oci://$REGISTRY/${{ inputs.chart-repository-prefix }}
+          else
+            printf "\n\nhelm push skipped...\n"
           fi
 
           printf "\n\nsuccess!"
         
-      - name: helm push
-        if: github.ref == '${{ inputs.defaultBranch }}'
-        run: |
-          #https://helm.sh/docs/helm/helm_push/
-          helm push ${{ github.workspace }}/artifacts/$CHART_NAME-$TAG.tgz oci://$REGISTRY/${{ inputs.chart-repository-prefix }}
-
       # - uses: actions/setup-python@v5
       #   with:
       #     python-version: 3.7
