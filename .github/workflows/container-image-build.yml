@@ -71,7 +71,7 @@ jobs:
         run: |
           REPOSITORY=${{ inputs.repository }}
 
-          if [ -z '$REPOSITORY' ]; then
+          if [ -z "$REPOSITORY" ]; then
             #set the repository to the current gh repository, then strip the repository_owner away
             REPOSITORY=${{ github.repository }}
             REPOSITORY=$(echo $REPOSITORY | sed "s|${{ github.repository_owner }}\/||g")
