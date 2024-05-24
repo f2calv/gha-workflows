@@ -30,10 +30,6 @@ on:
         type: boolean
         description: Is the helm chart a library chart?
         default: false
-      default-branch:
-        type: string
-        description: Workflow behaves differently on the default branch.
-        default: refs/heads/main
       push-chart:
         type: boolean
         description: By default always push the newly packaged chart.
