@@ -71,7 +71,7 @@ jobs:
         run: |
           REPOSITORY=${{ inputs.repository }}
 
-          if [ ! -z "$REPOSITORY" ]; then
+          if [ ! -z '$REPOSITORY' ]; then
             #lowercase the input
             REPOSITORY=${REPOSITORY,,}
             IMAGE_NAME=${REPOSITORY,,}
@@ -91,7 +91,7 @@ jobs:
           echo "REGISTRY=${{ inputs.registry }}" >> $GITHUB_ENV
 
       - name: docker login ${{ inputs.registry }}
-        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login $REGISTRY -u ${{ github.actor }} --password-stdin
+        run: echo '${{ secrets.GITHUB_TOKEN }}' | docker login $REGISTRY -u ${{ github.actor }} --password-stdin
 
       - name: docker buildx build/push
         id: build
@@ -114,7 +114,7 @@ jobs:
           if [ '${{ inputs.push-image }}' == 'true' ]; then
             ARGS+=(--push)
           fi
-          if [ ! -z "${{ inputs.args }}" ]; then
+          if [ ! -z '${{ inputs.args }}' ]; then
             ARGS+=(${{ inputs.args }})
           fi
 
