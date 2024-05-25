@@ -71,7 +71,7 @@ jobs:
         run: |
           REPOSITORY=${{ inputs.repository }}
 
-          if [ -z "$REPOSITORY" ]; then
+          if [[ -z "$REPOSITORY" ]]; then
             #set the repository to the current gh repository, then strip the repository_owner away
             REPOSITORY=${{ github.repository }}
             REPOSITORY=$(echo $REPOSITORY | sed "s|${{ github.repository_owner }}\/||g")
@@ -98,7 +98,7 @@ jobs:
 
           TAGS=()
           TAGS+=(-t "$REGISTRY/$REPOSITORY:$TAG")
-          if [ "${{ github.ref }}" == "${{ inputs.default-branch }}" ]; then
+          if [[ "${{ github.ref }}" == "${{ inputs.default-branch }}" ]]; then
             ADDITIONAL_TAG=${{ inputs.default-branch-tag }}
             TAGS+=(-t "$REGISTRY/$REPOSITORY:${{ inputs.tag-major }}")
             TAGS+=(-t "$REGISTRY/$REPOSITORY:${{ inputs.tag-major }}.${{ inputs.tag-minor }}")
@@ -109,10 +109,10 @@ jobs:
           TAGS+=(-t "$REGISTRY/$REPOSITORY:$ADDITIONAL_TAG")
 
           ARGS=()
-          if [ "${{ inputs.push-image }}" == "true" ]; then
+          if [[ "${{ inputs.push-image }}" == "true" ]]; then
             ARGS+=(--push)
           fi
-          if [ ! -z "${{ inputs.args }}" ]; then
+          if [[ ! -z "${{ inputs.args }}" ]]; then
             ARGS+=(${{ inputs.args }})
           fi
 

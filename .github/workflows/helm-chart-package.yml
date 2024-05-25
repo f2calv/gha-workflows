@@ -65,7 +65,7 @@ jobs:
 
       - name: set vars
         run: |
-          if [ -z "${{ inputs.repository }}" ]; then
+          if [[ -z "${{ inputs.repository }}" ]]; then
             REPOSITORY=$(echo ${{ github.repository }} | sed "s|${{ github.repository_owner }}\/||g")
           else
             REPOSITORY=${{ inputs.repository }}
@@ -98,12 +98,12 @@ jobs:
 
           printf "\n\nUpdate the version+appVersion in the Chart.yaml before packaging...\n"
           yq -i '.version = env(TAG)' $CHART_PATH/Chart.yaml
-          if [ "${{ inputs.is-library-chart }}" == "false" ]; then
+          if [[ "${{ inputs.is-library-chart }}" == "false" ]]; then
             yq -i '.appVersion = env(TAG)' $CHART_PATH/Chart.yaml
           fi
           cat $CHART_PATH/Chart.yaml
 
-          if [ "${{ inputs.is-library-chart }}" == "false" ]; then
+          if [[ "${{ inputs.is-library-chart }}" == "false" ]]; then
             printf "\n\nUpdate the repository in the values.yaml before packaging...\n"
             yq -i '.image.repository = env(IMAGE_REPOSITORY)' $CHART_PATH/values.yaml
             yq -i '.image.tag = env(TAG)' $CHART_PATH/values.yaml
@@ -138,7 +138,7 @@ jobs:
           printf "\n\n>helm package $CHART_PATH --destination ${{ github.workspace }}/artifacts/ --app-version $TAG\n"
           helm package $CHART_PATH --destination ${{ github.workspace }}/artifacts/ --app-version $TAG
     
-          if [ "${{ inputs.is-library-chart }}" == "false" ]; then
+          if [[ "${{ inputs.is-library-chart }}" == "false" ]]; then
             #https://helm.sh/docs/helm/helm_template/
             printf "\n\n>helm template $CHART_NAME $CHART_PATH > ${{ github.workspace }}/artifacts/$CHART_NAME.yaml\n"
             helm template $CHART_NAME $CHART_PATH > ${{ github.workspace }}/artifacts/$CHART_NAME.yaml
@@ -168,7 +168,7 @@ jobs:
         run: |
           #Note: we can only fully install the chart if we have pushed the image as well, assumption inputs.push-chart == inputs.push-image
           ARGS="--set=image.tag=$TAG"
-          if [ "${{ inputs.push-chart }}" == "false" ]; then
+          if [[ "${{ inputs.push-chart }}" == "false" ]]; then
             ARGS="--set=image.repository=nginx --set=image.tag=latest"
           fi
           docker run --rm --network host --workdir=/data --volume ~/.kube/config:/root/.kube/config:ro \
