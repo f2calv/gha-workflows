@@ -78,7 +78,8 @@ jobs:
 
           REGISTRY=${{ inputs.registry }}
           echo "REGISTRY=$REGISTRY" >> $GITHUB_ENV
-          echo "REPOSITORY=$REGISTRY/${{ inputs.repository-prefix }}$REPOSITORY" >> $GITHUB_ENV
+          echo "REPOSITORY=${{ inputs.repository-prefix }}$REPOSITORY" >> $GITHUB_ENV
+          echo "IMAGE_REPOSITORY=$REGISTRY/$REPOSITORY" >> $GITHUB_ENV
           echo "TAG=${{ inputs.tag }}" >> $GITHUB_ENV
 
       - name: helm build/lint/package
@@ -87,6 +88,7 @@ jobs:
           echo "CHART_PATH=$CHART_PATH"
           echo "REGISTRY=$REGISTRY"
           echo "REPOSITORY=$REPOSITORY"
+          echo "IMAGE_REPOSITORY=$IMAGE_REPOSITORY"
           echo "TAG=$TAG"
 
           printf "\n\n>helm version\n"
@@ -105,7 +107,7 @@ jobs:
 
           if [ "${{ inputs.is-library-chart }}" == "false" ]; then
             printf "\n\nUpdate the repository in the values.yaml before packaging...\n"
-            yq -i '.image.repository = env(REPOSITORY)' $CHART_PATH/values.yaml
+            yq -i '.image.repository = env(IMAGE_REPOSITORY)' $CHART_PATH/values.yaml
             yq -i '.image.tag = env(TAG)' $CHART_PATH/values.yaml
 
             printf "\n\nAdd git repository context in the values.yaml before packaging...\n"
