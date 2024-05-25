@@ -38,7 +38,7 @@ on:
       gv-source:
         description: Choose an installation source for GitVersion, options include container, dotnet & action.
         type: string
-        default: container
+        default: action
     outputs:
       semVer:
         description: e.g. 1.2.301
