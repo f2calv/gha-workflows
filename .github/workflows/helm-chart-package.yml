@@ -152,8 +152,9 @@ jobs:
       - uses: helm/kind-action@v1
         if: inputs.chart-testing-command == 'install' && inputs.is-library-chart == false
 
+      #https://github.com/helm/chart-testing/blob/main/doc/ct_lint.md
       #https://github.com/helm/chart-testing/blob/main/doc/ct_install.md
-      - name: ct (${{ inputs.chart-testing-command }})
+      - name: chart-testing (${{ inputs.chart-testing-command }})
         if: inputs.chart-testing-command != '' && inputs.is-library-chart == false
         run: |
           docker run --network host --workdir=/data --volume ~/.kube/config:/root/.kube/config:ro \
