@@ -157,7 +157,7 @@ jobs:
         if: inputs.chart-testing-cli-command == 'lint'
         run: |
           ARGS="--set=image.tag=$TAG"
-          docker run --network host --workdir=/data --volume ~/.kube/config:/root/.kube/config:ro \
+          docker run --rm --network host --workdir=/data --volume ~/.kube/config:/root/.kube/config:ro \
             --volume $(pwd):/data quay.io/helmpack/chart-testing:${{ inputs.chart-testing-cli-version }} \
             ct ${{ inputs.chart-testing-cli-command }} --charts ${{ inputs.chart-path }}$REPOSITORY \
             --helm-extra-args "$ARGS" --validate-maintainers=false
@@ -171,7 +171,7 @@ jobs:
           if [ "${{ inputs.push-chart }}" == "false" ]; then
             ARGS="--set=image.repository=nginx --set=image.tag=latest"
           fi
-          docker run --network host --workdir=/data --volume ~/.kube/config:/root/.kube/config:ro \
+          docker run --rm --network host --workdir=/data --volume ~/.kube/config:/root/.kube/config:ro \
             --volume $(pwd):/data quay.io/helmpack/chart-testing:${{ inputs.chart-testing-cli-version }} \
             ct ${{ inputs.chart-testing-cli-command }} --charts ${{ inputs.chart-path }}$REPOSITORY \
             --helm-extra-set-args "$ARGS" --build-id ${{ github.run_id }}
