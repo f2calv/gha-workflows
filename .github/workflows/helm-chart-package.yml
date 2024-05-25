@@ -25,7 +25,7 @@ on:
       chart-path:
         type: string
         description: Relative path to the charts folder in the Git repository.
-        default: ./charts
+        default: ./charts/
       is-library-chart:
         type: boolean
         description: Is the helm chart a library chart?
@@ -34,6 +34,14 @@ on:
         type: boolean
         description: By default always push the newly packaged chart.
         default: true
+      chart-testing-command:
+        type: string
+        description: Accepts lint, install or lint-and-install. Default is lint.
+        default: lint
+      chart-testing-tag:
+        type: string
+        description: See https://quay.io/repository/helmpack/chart-testing?tab=tags
+        default: latest
 
 jobs:
   helm-chart-package:
@@ -66,7 +74,7 @@ jobs:
           fi
           REPOSITORY=${REPOSITORY,,}
           echo "CHART_NAME=$REPOSITORY" >> $GITHUB_ENV
-          echo "CHART_PATH=${{ inputs.chart-path }}/$REPOSITORY" >> $GITHUB_ENV
+          echo "CHART_PATH=${{ inputs.chart-path }}$REPOSITORY" >> $GITHUB_ENV
 
           REGISTRY=${{ inputs.registry }}
           echo "REGISTRY=$REGISTRY" >> $GITHUB_ENV
@@ -141,33 +149,18 @@ jobs:
 
           printf "\n\nsuccess!"
 
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.x'
-          check-latest: true
+      - uses: helm/kind-action@v1
+        if: inputs.chart-testing-command == 'install' && inputs.is-library-chart == 'false'
 
-      - name: Set up chart-testing
-        uses: helm/chart-testing-action@v2.6.1
-
-      - name: Run chart-testing (list-changed)
-        id: list-changed
+      #https://github.com/helm/chart-testing/blob/main/doc/ct_install.md
+      - name: ct (${{ inputs.chart-testing-command }})
+        if: inputs.chart-testing-command != '' && inputs.is-library-chart == 'false'
         run: |
-          changed=$(ct list-changed --target-branch ${{ github.event.repository.default_branch }})
-          if [[ -n "$changed" ]]; then
-            echo "changed=true" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Run chart-testing (lint)
-        if: steps.list-changed.outputs.changed == 'true'
-        run: ct lint --target-branch ${{ github.event.repository.default_branch }}
-
-      - name: Create kind cluster
-        if: steps.list-changed.outputs.changed == 'true'
-        uses: helm/kind-action@v1
-
-      - name: Run chart-testing (install)
-        if: steps.list-changed.outputs.changed == 'true'
-        run: ct install --target-branch ${{ github.event.repository.default_branch }}
+          docker run -it --network host --workdir=/data --volume ~/.kube/config:/root/.kube/config:ro \
+            --volume $(pwd):/data quay.io/helmpack/chart-testing:${{ inputs.chart-testing-tag }} \
+            ct ${{ inputs.chart-testing-command }} --charts ${{ inputs.chart-path }}$REPOSITORY \
+            --helm-extra-set-args "--set=image.tag=$TAG" \
+            --build-id ${{ github.run_id }}
 
       - name: helm push
         if: inputs.push-chart
