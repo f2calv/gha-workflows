@@ -25,7 +25,7 @@ on:
       chart-path:
         type: string
         description: Relative path to the charts folder in the Git repository.
-        default: ./charts
+        default: ./charts/
       is-library-chart:
         type: boolean
         description: Is the helm chart a library chart?
@@ -34,6 +34,14 @@ on:
         type: boolean
         description: By default always push the newly packaged chart.
         default: true
+      chart-testing-cli-version:
+        type: string
+        description: See https://quay.io/repository/helmpack/chart-testing?tab=tags
+        default: latest
+      chart-testing-cli-command:
+        type: string
+        description: Accepts lint or install. Default is lint.
+        default: lint
 
 jobs:
   helm-chart-package:
@@ -64,11 +72,12 @@ jobs:
           fi
           REPOSITORY=${REPOSITORY,,}
           echo "CHART_NAME=$REPOSITORY" >> $GITHUB_ENV
-          echo "CHART_PATH=${{ inputs.chart-path }}/$REPOSITORY" >> $GITHUB_ENV
+          echo "CHART_PATH=${{ inputs.chart-path }}$REPOSITORY" >> $GITHUB_ENV
 
           REGISTRY=${{ inputs.registry }}
           echo "REGISTRY=$REGISTRY" >> $GITHUB_ENV
-          echo "REPOSITORY=$REGISTRY/${{ inputs.repository-prefix }}$REPOSITORY" >> $GITHUB_ENV
+          echo "REPOSITORY=${{ inputs.repository-prefix }}$REPOSITORY" >> $GITHUB_ENV
+          echo "IMAGE_REPOSITORY=$REGISTRY/$REPOSITORY" >> $GITHUB_ENV
           echo "TAG=${{ inputs.tag }}" >> $GITHUB_ENV
 
       - name: helm build/lint/package
@@ -77,6 +86,7 @@ jobs:
           echo "CHART_PATH=$CHART_PATH"
           echo "REGISTRY=$REGISTRY"
           echo "REPOSITORY=$REPOSITORY"
+          echo "IMAGE_REPOSITORY=$IMAGE_REPOSITORY"
           echo "TAG=$TAG"
 
           printf "\n\n>helm version\n"
@@ -95,7 +105,7 @@ jobs:
 
           if [ "${{ inputs.is-library-chart }}" == "false" ]; then
             printf "\n\nUpdate the repository in the values.yaml before packaging...\n"
-            yq -i '.image.repository = env(REPOSITORY)' $CHART_PATH/values.yaml
+            yq -i '.image.repository = env(IMAGE_REPOSITORY)' $CHART_PATH/values.yaml
             yq -i '.image.tag = env(TAG)' $CHART_PATH/values.yaml
 
             printf "\n\nAdd git repository context in the values.yaml before packaging...\n"
@@ -137,37 +147,38 @@ jobs:
             printf "\n\nhelm template skipped...\n"
           fi
 
-          if [ "${{ inputs.push-chart }}" == "true" ]; then
-            #https://helm.sh/docs/helm/helm_push/
-            printf "\n\n>helm push ${{ github.workspace }}/artifacts/$CHART_NAME-$TAG.tgz oci://$REGISTRY/${{ inputs.chart-repository-prefix }}\n"
-            helm push ${{ github.workspace }}/artifacts/$CHART_NAME-$TAG.tgz oci://$REGISTRY/${{ inputs.chart-repository-prefix }}
-          else
-            printf "\n\nhelm push skipped...\n"
-          fi
-
           printf "\n\nsuccess!"
-        
-      # - uses: actions/setup-python@v5
-      #   with:
-      #     python-version: 3.7
 
-      # - name: chart-testing (setup)
-      #   uses: helm/chart-testing-action@v2
+      - uses: helm/kind-action@v1
+        if: inputs.chart-testing-cli-command == 'install' && inputs.is-library-chart == false
 
-      # - name: chart-testing (run list-changed)
-      #   id: list-changed
-      #   run: |
-      #     changed=$(ct list-changed --target-branch main)
-      #     if [[ -n "$changed" ]]; then
-      #       echo "changed=true" >> $GITHUB_OUTPUT
-      #     fi
+      #https://github.com/helm/chart-testing/blob/main/doc/ct_lint.md
+      - name: chart-testing (lint)
+        if: inputs.chart-testing-cli-command == 'lint'
+        run: |
+          ARGS="--set=image.tag=$TAG"
+          docker run --network host --workdir=/data --volume ~/.kube/config:/root/.kube/config:ro \
+            --volume $(pwd):/data quay.io/helmpack/chart-testing:${{ inputs.chart-testing-cli-version }} \
+            ct ${{ inputs.chart-testing-cli-command }} --charts ${{ inputs.chart-path }}$REPOSITORY \
+            --helm-extra-args "$ARGS" --validate-maintainers=false
 
-      # - name: chart-testing (run lint)
-      #   run: ct lint
+      #https://github.com/helm/chart-testing/blob/main/doc/ct_install.md
+      - name: chart-testing (install)
+        if: inputs.chart-testing-cli-command == 'install' && inputs.is-library-chart == false
+        run: |
+          #Note: we can only fully install the chart if we have pushed the image as well, assumption inputs.push-chart == inputs.push-image
+          ARGS="--set=image.tag=$TAG"
+          if [ "${{ inputs.push-chart }}" == "false" ]; then
+            ARGS="--set=image.repository=nginx --set=image.tag=latest"
+          fi
+          docker run --network host --workdir=/data --volume ~/.kube/config:/root/.kube/config:ro \
+            --volume $(pwd):/data quay.io/helmpack/chart-testing:${{ inputs.chart-testing-cli-version }} \
+            ct ${{ inputs.chart-testing-cli-command }} --charts ${{ inputs.chart-path }}$REPOSITORY \
+            --helm-extra-set-args "$ARGS" --build-id ${{ github.run_id }}
 
-      # - name: create kind cluster
-      #   uses: helm/kind-action@v1
-      #   #if: steps.list-changed.outputs.changed == 'true'
-
-      # - name: chart-testing (run install)
-      #   run: ct install
+      - name: helm push
+        if: inputs.push-chart == true
+        run: |
+          #https://helm.sh/docs/helm/helm_push/
+          printf "\n\n>helm push ${{ github.workspace }}/artifacts/$CHART_NAME-$TAG.tgz oci://$REGISTRY/${{ inputs.chart-repository-prefix }}\n"
+          helm push ${{ github.workspace }}/artifacts/$CHART_NAME-$TAG.tgz oci://$REGISTRY/${{ inputs.chart-repository-prefix }}
