@@ -159,7 +159,7 @@ jobs:
           docker run -it --network host --workdir=/data --volume ~/.kube/config:/root/.kube/config:ro \
             --volume $(pwd):/data quay.io/helmpack/chart-testing:${{ inputs.chart-testing-tag }} \
             ct ${{ inputs.chart-testing-command }} --charts ${{ inputs.chart-path }}$REPOSITORY \
-            --helm-extra-set-args "--set=image.tag=$TAG" \
+            --helm-extra-args "--set=image.tag=$TAG" \
             --build-id ${{ github.run_id }}
 
       - name: helm push
