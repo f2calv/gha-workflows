@@ -163,17 +163,15 @@ jobs:
       - name: chart-testing (${{ inputs.chart-testing-cli-command }})
         if: (inputs.is-library-chart && inputs.chart-testing-cli-command == 'lint') || inputs.is-library-chart == false
         run: |
-          #Note: we can only truly install the chart if we have pushed the container image as well, assume inputs.push-chart == inputs.push-image
-          ARG1="--set=image.tag=$TAG"
-          ARG2=""
+          #Note: we can only fully install the chart if we have pushed the image as well, assumption inputs.push-chart == inputs.push-image
+          ARGS="--set=image.tag=$TAG"
           if [ "${{ inputs.push-chart }}" == "false" ]; then
-            ARG1="--set=image.tag=latest"
-            ARG2=" --set=image.repository=nginx"
+            ARGS="--set=image.repository=nginx --set=image.tag=latest"
           fi
           docker run --network host --workdir=/data --volume ~/.kube/config:/root/.kube/config:ro \
             --volume $(pwd):/data quay.io/helmpack/chart-testing:${{ inputs.chart-testing-cli-version }} \
             ct ${{ inputs.chart-testing-cli-command }} --charts ${{ inputs.chart-path }}$REPOSITORY \
-            --helm-extra-args "$ARG1$ARG2" ${{ inputs.chart-testing-cli-args }}
+            --helm-extra-args "$ARGS" ${{ inputs.chart-testing-cli-args }}
 
       - name: helm push
         if: inputs.push-chart == true
