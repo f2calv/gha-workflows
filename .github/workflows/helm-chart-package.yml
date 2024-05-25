@@ -42,10 +42,6 @@ on:
         type: string
         description: Accepts lint or install. Default is lint.
         default: lint
-      chart-testing-cli-args:
-        type: string
-        description: Additional args to pass to chart-testing cli.
-        default: --validate-maintainers=false
 
 jobs:
   helm-chart-package:
@@ -159,9 +155,18 @@ jobs:
         if: inputs.chart-testing-cli-command == 'install' && inputs.is-library-chart == false
 
       #https://github.com/helm/chart-testing/blob/main/doc/ct_lint.md
+      - name: chart-testing (lint)
+        if: inputs.chart-testing-cli-command == 'lint'
+        run: |
+          ARGS="--set=image.tag=$TAG"
+          docker run --network host --workdir=/data --volume ~/.kube/config:/root/.kube/config:ro \
+            --volume $(pwd):/data quay.io/helmpack/chart-testing:${{ inputs.chart-testing-cli-version }} \
+            ct ${{ inputs.chart-testing-cli-command }} --charts ${{ inputs.chart-path }}$REPOSITORY \
+            --helm-extra-args "$ARGS" --validate-maintainers=false
+
       #https://github.com/helm/chart-testing/blob/main/doc/ct_install.md
-      - name: chart-testing (${{ inputs.chart-testing-cli-command }})
-        if: (inputs.is-library-chart && inputs.chart-testing-cli-command == 'lint') || inputs.is-library-chart == false
+      - name: chart-testing (install)
+        if: inputs.chart-testing-cli-command == 'install' && inputs.is-library-chart == false
         run: |
           #Note: we can only fully install the chart if we have pushed the image as well, assumption inputs.push-chart == inputs.push-image
           ARGS="--set=image.tag=$TAG"
@@ -171,7 +176,7 @@ jobs:
           docker run --network host --workdir=/data --volume ~/.kube/config:/root/.kube/config:ro \
             --volume $(pwd):/data quay.io/helmpack/chart-testing:${{ inputs.chart-testing-cli-version }} \
             ct ${{ inputs.chart-testing-cli-command }} --charts ${{ inputs.chart-path }}$REPOSITORY \
-            --helm-extra-args "$ARGS" ${{ inputs.chart-testing-cli-args }}
+            --helm-extra-args "$ARGS" --build-id ${{ github.run_id }}
 
       - name: helm push
         if: inputs.push-chart == true
