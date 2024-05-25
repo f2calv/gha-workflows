@@ -48,8 +48,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - name: setup helm (1 of 2) #pull version from devcontainer.json
         run: |
