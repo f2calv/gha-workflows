@@ -150,11 +150,11 @@ jobs:
           printf "\n\nsuccess!"
 
       - uses: helm/kind-action@v1
-        if: inputs.chart-testing-command == 'install' && inputs.is-library-chart == 'false'
+        if: inputs.chart-testing-command == 'install' && inputs.is-library-chart == false
 
       #https://github.com/helm/chart-testing/blob/main/doc/ct_install.md
       - name: ct (${{ inputs.chart-testing-command }})
-        if: inputs.chart-testing-command != '' && inputs.is-library-chart == 'false'
+        if: inputs.chart-testing-command != '' && inputs.is-library-chart == false
         run: |
           docker run -it --network host --workdir=/data --volume ~/.kube/config:/root/.kube/config:ro \
             --volume $(pwd):/data quay.io/helmpack/chart-testing:${{ inputs.chart-testing-tag }} \
@@ -163,7 +163,7 @@ jobs:
             --build-id ${{ github.run_id }}
 
       - name: helm push
-        if: inputs.push-chart
+        if: inputs.push-chart == true
         run: |
           #https://helm.sh/docs/helm/helm_push/
           printf "\n\n>helm push ${{ github.workspace }}/artifacts/$CHART_NAME-$TAG.tgz oci://$REGISTRY/${{ inputs.chart-repository-prefix }}\n"
