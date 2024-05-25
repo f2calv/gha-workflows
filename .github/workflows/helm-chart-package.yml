@@ -156,11 +156,10 @@ jobs:
       - name: ct (${{ inputs.chart-testing-command }})
         if: inputs.chart-testing-command != '' && inputs.is-library-chart == false
         run: |
-          docker run -t --network host --workdir=/data --volume ~/.kube/config:/root/.kube/config:ro \
+          docker run --network host --workdir=/data --volume ~/.kube/config:/root/.kube/config:ro \
             --volume $(pwd):/data quay.io/helmpack/chart-testing:${{ inputs.chart-testing-tag }} \
             ct ${{ inputs.chart-testing-command }} --charts ${{ inputs.chart-path }}$REPOSITORY \
-            --helm-extra-args "--set=image.tag=$TAG" \
-            --build-id ${{ github.run_id }}
+            --helm-extra-args "--set=image.tag=$TAG"
 
       - name: helm push
         if: inputs.push-chart == true
