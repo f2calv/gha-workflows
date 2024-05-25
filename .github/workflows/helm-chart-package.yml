@@ -157,7 +157,8 @@ jobs:
       #https://github.com/helm/chart-testing/blob/main/doc/ct_lint.md
       #https://github.com/helm/chart-testing/blob/main/doc/ct_install.md
       - name: chart-testing (${{ inputs.chart-testing-command }})
-        if: inputs.chart-testing-command != '' && inputs.is-library-chart == false
+        #if: inputs.chart-testing-command != '' && inputs.is-library-chart == false
+        if: (inputs.is-library-chart && inputs.chart-testing-command == 'lint') || !inputs.is-library-chart
         run: |
           docker run --network host --workdir=/data --volume ~/.kube/config:/root/.kube/config:ro \
             --volume $(pwd):/data quay.io/helmpack/chart-testing:${{ inputs.chart-testing-tag }} \
