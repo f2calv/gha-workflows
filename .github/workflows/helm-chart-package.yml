@@ -40,7 +40,7 @@ on:
         default: latest
       chart-testing-cli-command:
         type: string
-        description: Accepts lint, install or lint-and-install. Default is lint.
+        description: Accepts lint or install. Default is lint.
         default: lint
       chart-testing-cli-args:
         type: string
@@ -156,18 +156,24 @@ jobs:
           printf "\n\nsuccess!"
 
       - uses: helm/kind-action@v1
-        if: inputs.chart-testing-command == 'install' && inputs.is-library-chart == false
+        if: !inputs.is-library-chart && inputs.chart-testing-command == 'install'
 
       #https://github.com/helm/chart-testing/blob/main/doc/ct_lint.md
       #https://github.com/helm/chart-testing/blob/main/doc/ct_install.md
       - name: chart-testing (${{ inputs.chart-testing-cli-command }})
-        #if: inputs.chart-testing-command != '' && inputs.is-library-chart == false
         if: (inputs.is-library-chart && inputs.chart-testing-cli-command == 'lint') || !inputs.is-library-chart
         run: |
+          #Note: we can only truly install the chart if we have pushed the container image as well, assume inputs.push-chart == inputs.push-image
+          ARG1="--set=image.tag=$TAG"
+          ARG2=""
+          if [ "${{ inputs.push-chart }}" == "false" ]; then
+            ARG1="--set=image.tag=latest"
+            ARG2=" --set=image.repository=nginx"
+          fi
           docker run --network host --workdir=/data --volume ~/.kube/config:/root/.kube/config:ro \
             --volume $(pwd):/data quay.io/helmpack/chart-testing:${{ inputs.chart-testing-cli-version }} \
             ct ${{ inputs.chart-testing-cli-command }} --charts ${{ inputs.chart-path }}$REPOSITORY \
-            --helm-extra-args "--set=image.tag=$TAG" ${{ inputs.chart-testing-cli-args }}
+            --helm-extra-args "$ARG1$ARG2" ${{ inputs.chart-testing-cli-args }}
 
       - name: helm push
         if: inputs.push-chart == true
