@@ -67,15 +67,8 @@ jobs:
       patch: ${{ steps.gha-release-versioning.outputs.patch }}
     steps:
       - uses: actions/checkout@v4
-        if: github.event_name != 'pull_request'
         with:
           fetch-depth: 0
-
-      - uses: actions/checkout@v4
-        if: github.event_name == 'pull_request'
-        with:
-          fetch-depth: 0
-          ref: ${{ github.event.pull_request.head.sha }}
 
       - uses: f2calv/gha-release-versioning@v1
         id: gha-release-versioning
