@@ -31,6 +31,14 @@ on:
         required: false
         type: boolean
         default: true
+      gv-config:
+        description: Configuration filename that GitVersion will use.
+        type: string
+        default: GitVersion.yml
+      gv-source:
+        description: Choose an installation source for GitVersion, options include container, dotnet & actions.
+        type: string
+        default: actions
     outputs:
       semVer:
         description: e.g. 1.2.301
@@ -70,3 +78,5 @@ jobs:
           tag-prefix: ${{ inputs.tag-prefix }}
           move-major-tag: ${{ inputs.move-major-tag }}
           tag-and-release: ${{ inputs.tag-and-release }}
+          gv-config: ${{ inputs.gv-config }}
+          gv-source: ${{ inputs.gv-source }}
