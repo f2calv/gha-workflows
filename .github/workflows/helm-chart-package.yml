@@ -159,7 +159,7 @@ jobs:
           ARGS="--set=image.tag=$TAG"
           docker run --rm --network host --workdir=/data --volume ~/.kube/config:/root/.kube/config:ro \
             --volume $(pwd):/data quay.io/helmpack/chart-testing:${{ inputs.chart-testing-cli-version }} \
-            ct ${{ inputs.chart-testing-cli-command }} --charts ${{ inputs.chart-path }}$REPOSITORY \
+            ct ${{ inputs.chart-testing-cli-command }} --charts $CHART_PATH \
             --helm-extra-args "$ARGS" --validate-maintainers=false
 
       #https://github.com/helm/chart-testing/blob/main/doc/ct_install.md
@@ -173,7 +173,7 @@ jobs:
           fi
           docker run --rm --network host --workdir=/data --volume ~/.kube/config:/root/.kube/config:ro \
             --volume $(pwd):/data quay.io/helmpack/chart-testing:${{ inputs.chart-testing-cli-version }} \
-            ct ${{ inputs.chart-testing-cli-command }} --charts ${{ inputs.chart-path }}$REPOSITORY \
+            ct ${{ inputs.chart-testing-cli-command }} --charts $CHART_PATH \
             --helm-extra-set-args "$ARGS" --build-id ${{ github.run_id }}
 
       - name: helm push
