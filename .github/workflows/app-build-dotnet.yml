@@ -24,7 +24,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: dotnet restore
-        run: dotnet restore ${{ inputs.solution-name }} --verbosity minimal --configfile NuGet.config
+        run: dotnet restore ${{ inputs.solution-name }} --verbosity minimal
 
       - name: dotnet build
         run: dotnet build ${{ inputs.solution-name }} -c ${{ inputs.configuration }} --nologo --no-restore -p:Version='${{ inputs.fullSemVer }}' -p:SourceRevisionId=${{ github.sha }}
