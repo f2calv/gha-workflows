@@ -1,0 +1,31 @@
+name: lint
+
+on:
+  workflow_call:
+    inputs:
+      pre-commit-version:
+        description: Set pre-commit version.
+        type: string
+        default: 3.7.1
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      #https://pre-commit.com/
+      - name: pre-commit
+        run: |
+          echo "pre-commit setup..."
+          #sudo apt-get update && sudo apt-get install -y python3 pip pre-commit
+          python3 -m pip install 'pre-commit~=${{ inputs.pre-commit-version }}' -q
+
+          echo "git setup..."
+          git init
+          git add *
+
+          echo "pre-commit execute..."
+          #python3 -m pre_commit autoupdate
+          #python3 -m pre_commit install --install-hooks
+          python3 -m pre_commit run --all-files --verbose
