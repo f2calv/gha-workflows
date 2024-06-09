@@ -28,5 +28,4 @@ jobs:
           echo "pre-commit execute..."
           #python3 -m pre_commit autoupdate
           #python3 -m pre_commit install --install-hooks
-          #python3 -m pre_commit run --all-files --verbose
-          python3 -m pre_commit run --verbose
+          python3 -m pre_commit run --all-files --verbose
