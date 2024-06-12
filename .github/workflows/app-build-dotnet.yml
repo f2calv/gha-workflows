@@ -19,7 +19,7 @@ on:
 jobs:
   app-build-dotnet:
     runs-on: ubuntu-latest
-    #if: github.actor != 'depbot'
+    #if: github.actor != 'dependabot[bot]'
     steps:
       - uses: actions/checkout@v4
 
