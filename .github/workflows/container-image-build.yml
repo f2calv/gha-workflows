@@ -60,7 +60,7 @@ on:
 jobs:
   container-image-build:
     runs-on: ubuntu-latest
-    if: github.actor != 'depbot'
+    if: github.actor != 'dependabot[bot]'
     #https://github.blog/changelog/2021-04-20-github-actions-control-permissions-for-github_token/
     #https://docs.github.com/en/actions/using-jobs/assigning-permissions-to-jobs
     steps:
