@@ -48,9 +48,9 @@ jobs:
           BuildConfiguration: ${{ github.event.inputs.BuildConfiguration }}
           PublishPreview: ${{ inputs.PublishPreview }}
 
-  SonarQube:
+  gha-sonarqube:
     runs-on: windows-latest
-    needs: build
+    needs: dotnet-publish-nuget
     steps:
       - uses: f2calv/gha-sonarqube@v1
         with:
