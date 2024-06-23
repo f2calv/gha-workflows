@@ -125,11 +125,11 @@ jobs:
           #https://helm.sh/docs/helm/helm_dependency_update/
           printf "\n\n>helm dependency update $CHART_PATH\n"
           helm dependency update $CHART_PATH
-    
+
           #https://helm.sh/docs/helm/helm_dependency_list/
           printf "\n\n>helm dependency list $CHART_PATH\n"
           helm dependency list $CHART_PATH
-    
+
           #https://helm.sh/docs/helm/helm_lint/
           printf "\n\n>helm lint $CHART_PATH\n"
           helm lint $CHART_PATH
