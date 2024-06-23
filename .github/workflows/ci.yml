@@ -14,5 +14,8 @@ on:
     types: [opened, synchronize, reopened]
 
 jobs:
+  lint:
+    uses: ./.github/workflows/lint.yml@v1
+
   release:
     uses: ./.github/workflows/gha-release-versioning.yml
