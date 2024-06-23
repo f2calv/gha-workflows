@@ -15,7 +15,7 @@ on:
 
 jobs:
   lint:
-    uses: ./.github/workflows/lint.yml@v1
+    uses: ./.github/workflows/lint.yml
 
   release:
     uses: ./.github/workflows/gha-release-versioning.yml
