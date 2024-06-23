@@ -125,11 +125,11 @@ jobs:
           #https://helm.sh/docs/helm/helm_dependency_update/
           printf "\n\n>helm dependency update $CHART_PATH\n"
           helm dependency update $CHART_PATH
-    
+
           #https://helm.sh/docs/helm/helm_dependency_list/
           printf "\n\n>helm dependency list $CHART_PATH\n"
           helm dependency list $CHART_PATH
-    
+
           #https://helm.sh/docs/helm/helm_lint/
           printf "\n\n>helm lint $CHART_PATH\n"
           helm lint $CHART_PATH
@@ -137,7 +137,7 @@ jobs:
           #https://helm.sh/docs/helm/helm_package/
           printf "\n\n>helm package $CHART_PATH --destination ${{ github.workspace }}/artifacts/ --app-version $TAG\n"
           helm package $CHART_PATH --destination ${{ github.workspace }}/artifacts/ --app-version $TAG
-    
+
           if [[ "${{ inputs.is-library-chart }}" == "false" ]]; then
             #https://helm.sh/docs/helm/helm_template/
             printf "\n\n>helm template $CHART_NAME $CHART_PATH > ${{ github.workspace }}/artifacts/$CHART_NAME.yaml\n"

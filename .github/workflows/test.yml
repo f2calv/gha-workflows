@@ -51,7 +51,7 @@ jobs:
         if: ${{ github.event.inputs.test-true }}
         run: |
           echo 'hello world'
-  
+
       #workflow_dispatch works
       - name: test6
         if: ${{ inputs.test-true }}
