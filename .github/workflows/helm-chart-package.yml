@@ -89,6 +89,11 @@ jobs:
           echo "IMAGE_REPOSITORY=$IMAGE_REPOSITORY"
           echo "TAG=$TAG"
 
+          LABEL=$REPOSITORY-$TAG
+          if [[ "${#LABEL}" -gt 13 ]]; then
+            echo "::error::RFC 1123 Label Names maximum length of 63 characters reached, suggest shortening your branch name."
+          fi
+
           printf "\n\n>helm version\n"
           helm version
 
