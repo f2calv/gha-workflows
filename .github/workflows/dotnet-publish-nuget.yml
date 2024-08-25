@@ -58,12 +58,12 @@ jobs:
       tag-prefix: ''
       move-major-tag: false
 
-  gha-sonarqube:
-    runs-on: windows-latest
-    needs: [build]
-    steps:
-      - uses: f2calv/gha-sonarqube-dotnet@v1
-        with:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-          configuration: ${{ needs.build.outputs.configuration }}
+  # gha-sonarqube:
+  #   runs-on: windows-latest
+  #   needs: [build]
+  #   steps:
+  #     - uses: f2calv/gha-sonarqube-dotnet@v1
+  #       with:
+  #         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  #         SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+  #         configuration: ${{ needs.build.outputs.configuration }}
