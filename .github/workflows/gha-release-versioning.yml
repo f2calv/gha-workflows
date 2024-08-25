@@ -40,6 +40,9 @@ on:
         type: string
         default: actions
     outputs:
+      version:
+        description: e.g. 1.2.301
+        value: ${{ jobs.gha-release-versioning.outputs.version }}
       semVer:
         description: e.g. 1.2.301
         value: ${{ jobs.gha-release-versioning.outputs.semVer }}
@@ -55,16 +58,21 @@ on:
       patch:
         description: e.g. 301
         value: ${{ jobs.gha-release-versioning.outputs.patch }}
+      release-exists:
+        description: e.g. true or false
+        value: ${{ jobs.gha-release-versioning.outputs.release-exists }}
 
 jobs:
   gha-release-versioning:
     runs-on: ubuntu-latest
     outputs:
+      version: ${{ steps.gha-release-versioning.outputs.version }}
       semVer: ${{ steps.gha-release-versioning.outputs.semVer }}
       fullSemVer: ${{ steps.gha-release-versioning.outputs.fullSemVer }}
       major: ${{ steps.gha-release-versioning.outputs.major }}
       minor: ${{ steps.gha-release-versioning.outputs.minor }}
       patch: ${{ steps.gha-release-versioning.outputs.patch }}
+      release-exists: ${{ steps.gha-release-versioning.outputs.release-exists }}
     steps:
       - uses: actions/checkout@v4
         with:
