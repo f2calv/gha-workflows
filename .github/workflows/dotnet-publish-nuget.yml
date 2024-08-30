@@ -10,9 +10,14 @@ on:
         default: Release
       #workflow_call boolean input type is boolean
       #workflow_dispatch boolean input type is treated like string - because it actually has 3 values true/false/'empty'
+      execute-tests:
+        type: string #cannot be boolean see https://github.com/actions/runner/issues/1483
+        description: Execute unit tests. Default is 'true'
+        required: false
+        default: 'true'
       push-preview:
         type: string #cannot be boolean see https://github.com/actions/runner/issues/1483
-        description: Push preview branch?
+        description: Push preview branch? Default is 'false'
         required: true
         default: 'false'
     secrets:
@@ -41,6 +46,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
           configuration: ${{ inputs.configuration }}
+          execute-tests: ${{ inputs.execute-tests }}
           push-preview: ${{ inputs.push-preview }}
           version: ${{ needs.versioning.outputs.version }}
 
