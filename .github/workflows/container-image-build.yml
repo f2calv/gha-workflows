@@ -74,8 +74,8 @@ jobs:
         if: inputs.github-private-packages-auth == true
         run: |
           dotnet nuget remove source github
-          #dotnet nuget add source --username ${{ github.actor }} --password ${{ secrets.GITHUB_TOKEN }} --store-password-in-clear-text --name github "https://nuget.pkg.github.com/${{ github.actor }}/index.json" --configfile NuGet.config
-          dotnet nuget add source --username ${{ github.actor }} --password ${{ secrets.GH_PAT_PACKAGES }} --store-password-in-clear-text --name github "https://nuget.pkg.github.com/${{ github.actor }}/index.json" --configfile NuGet.config
+          dotnet nuget add source --username ${{ github.actor }} --password ${{ secrets.GITHUB_TOKEN }} --store-password-in-clear-text --name github "https://nuget.pkg.github.com/${{ github.actor }}/index.json" --configfile NuGet.config
+          #dotnet nuget add source --username ${{ github.actor }} --password ${{ secrets.GH_PAT_PACKAGES }} --store-password-in-clear-text --name github "https://nuget.pkg.github.com/${{ github.actor }}/index.json" --configfile NuGet.config
 
       - name: set vars
         id: setupvars
