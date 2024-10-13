@@ -17,8 +17,8 @@ jobs:
       #https://pre-commit.com/
       - name: pre-commit
         run: |
-          python3 -m venv pwd
-          source pwd/bin/activate
+          python3 -m venv .
+          source bin/activate
           
           echo "pre-commit setup..."
 
