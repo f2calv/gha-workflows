@@ -17,7 +17,8 @@ jobs:
       #https://pre-commit.com/
       - name: pre-commit
         run: |
-          python -m venv /opt/ci
+          python3 -m venv venv/ci
+          source venv/ci/bin/activate
           
           echo "pre-commit setup..."
 
