@@ -195,5 +195,5 @@ jobs:
       #   if: inputs.push-chart == true
       #   run: |
       #     #https://helm.sh/docs/helm/helm_push/
-      #     printf "\n\n>helm push ${{ github.workspace }}/artifacts/$CHART_NAME-$TAG.tgz oci://$REGISTRY/${{ inputs.chart-repository-prefix }}\n"
-      #     helm push ${{ github.workspace }}/artifacts/$CHART_NAME-$TAG.tgz oci://$REGISTRY/${{ inputs.chart-repository-prefix }}
+      #     printf "\n\n>helm push ${{ github.workspace }}/artifacts/$CHART_NAME-$TAG.tgz oci://$REGISTRY/${{ inputs.chart-repository }}\n"
+      #     helm push ${{ github.workspace }}/artifacts/$CHART_NAME-$TAG.tgz oci://$REGISTRY/${{ inputs.chart-repository }}
