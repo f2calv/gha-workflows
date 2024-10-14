@@ -90,13 +90,17 @@ jobs:
           export CHART_NAME=$(basename $CHART_REPOSITORY)
           
           echo "CHART_REGISTRY=$CHART_REGISTRY"
+          echo "CHART_REGISTRY=$CHART_REGISTRY" >> $GITHUB_ENV
           echo "CHART_REPOSITORY=$CHART_REPOSITORY"
+          echo "CHART_REPOSITORY=$CHART_REPOSITORY" >> $GITHUB_ENV
           echo "CHART_NAME=$CHART_NAME"
+          echo "CHART_NAME=$CHART_NAME" >> $GITHUB_ENV
 
           export CHART_PATH=${{ inputs.chart-path }}
           echo "CHART_PATH=$CHART_PATH"
           export TAG=${{ inputs.tag }}
           echo "TAG=$TAG"
+          echo "TAG=$TAG" >> $GITHUB_ENV
 
           LABEL=$IMAGE_REPOSITORY-$TAG
           if [[ "${#LABEL}" -gt 63 ]]; then
@@ -195,5 +199,5 @@ jobs:
         if: inputs.push-chart == true
         run: |
           #https://helm.sh/docs/helm/helm_push/
-          printf "\n\n>helm push ${{ github.workspace }}/artifacts/$CHART_NAME-$TAG.tgz oci://$CHART_REGISTRY/${{ inputs.chart-repository }}\n"
-          helm push ${{ github.workspace }}/artifacts/$CHART_NAME-$TAG.tgz oci://$CHART_REGISTRY/${{ inputs.chart-repository }}
+          printf "\n\n>helm push ${{ github.workspace }}/artifacts/$CHART_NAME-$TAG.tgz oci://$CHART_REGISTRY/$CHART_REPOSITORY\n"
+          helm push ${{ github.workspace }}/artifacts/$CHART_NAME-$TAG.tgz oci://$CHART_REGISTRY/$CHART_REPOSITORY
