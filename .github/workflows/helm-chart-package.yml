@@ -109,7 +109,7 @@ jobs:
 
           printf "\n\n>helm registry login $CHART_REGISTRY/$CHART_REPOSITORY --username ${{ github.repository_owner }} --password-stdin\n"
           printf ${{ secrets.GITHUB_TOKEN }} | helm registry login $CHART_REGISTRY/$CHART_REPOSITORY --username ${{ github.repository_owner }} --password-stdin
-          #printf $servicePrincipalKey | helm registry login $REGISTRY --username $servicePrincipalId --password-stdin
+          #printf $servicePrincipalKey | helm registry login $CHART_REGISTRY --username $servicePrincipalId --password-stdin
 
           printf "\n\nUpdate the version+appVersion in the Chart.yaml before packaging...\n"
           yq -i '.version = env(TAG)' $CHART_PATH/Chart.yaml
@@ -164,36 +164,36 @@ jobs:
 
           printf "\n\nsuccess!"
 
-      # - uses: helm/kind-action@v1
-      #   if: inputs.chart-testing-cli-command == 'install' && inputs.is-library-chart == false
+      - uses: helm/kind-action@v1
+        if: inputs.chart-testing-cli-command == 'install' && inputs.is-library-chart == false
 
-      # #https://github.com/helm/chart-testing/blob/main/doc/ct_lint.md
-      # - name: chart-testing (lint)
-      #   if: inputs.chart-testing-cli-command == 'lint'
-      #   run: |
-      #     ARGS="--set=image.tag=$TAG"
-      #     docker run --rm --network host --workdir=/data --volume ~/.kube/config:/root/.kube/config:ro \
-      #       --volume $(pwd):/data quay.io/helmpack/chart-testing:${{ inputs.chart-testing-cli-version }} \
-      #       ct ${{ inputs.chart-testing-cli-command }} --charts $CHART_PATH \
-      #       --helm-extra-args "$ARGS" --validate-maintainers=false
+      #https://github.com/helm/chart-testing/blob/main/doc/ct_lint.md
+      - name: chart-testing (lint)
+        if: inputs.chart-testing-cli-command == 'lint'
+        run: |
+          ARGS="--set=image.tag=$TAG"
+          docker run --rm --network host --workdir=/data --volume ~/.kube/config:/root/.kube/config:ro \
+            --volume $(pwd):/data quay.io/helmpack/chart-testing:${{ inputs.chart-testing-cli-version }} \
+            ct ${{ inputs.chart-testing-cli-command }} --charts $CHART_PATH \
+            --helm-extra-args "$ARGS" --validate-maintainers=false
 
-      # #https://github.com/helm/chart-testing/blob/main/doc/ct_install.md
-      # - name: chart-testing (install)
-      #   if: inputs.chart-testing-cli-command == 'install' && inputs.is-library-chart == false
-      #   run: |
-      #     #Note: we can only fully install the chart if we have pushed the image as well, assumption inputs.push-chart == inputs.push-image
-      #     ARGS="--set=image.tag=$TAG"
-      #     if [[ "${{ inputs.push-chart }}" == "false" ]]; then
-      #       ARGS="--set=image.repository=nginx --set=image.tag=latest"
-      #     fi
-      #     docker run --rm --network host --workdir=/data --volume ~/.kube/config:/root/.kube/config:ro \
-      #       --volume $(pwd):/data quay.io/helmpack/chart-testing:${{ inputs.chart-testing-cli-version }} \
-      #       ct ${{ inputs.chart-testing-cli-command }} --charts $CHART_PATH \
-      #       --helm-extra-set-args "$ARGS" --build-id ${{ github.run_id }}
+      #https://github.com/helm/chart-testing/blob/main/doc/ct_install.md
+      - name: chart-testing (install)
+        if: inputs.chart-testing-cli-command == 'install' && inputs.is-library-chart == false
+        run: |
+          #Note: we can only fully install the chart if we have pushed the image as well, assumption inputs.push-chart == inputs.push-image
+          ARGS="--set=image.tag=$TAG"
+          if [[ "${{ inputs.push-chart }}" == "false" ]]; then
+            ARGS="--set=image.repository=nginx --set=image.tag=latest"
+          fi
+          docker run --rm --network host --workdir=/data --volume ~/.kube/config:/root/.kube/config:ro \
+            --volume $(pwd):/data quay.io/helmpack/chart-testing:${{ inputs.chart-testing-cli-version }} \
+            ct ${{ inputs.chart-testing-cli-command }} --charts $CHART_PATH \
+            --helm-extra-set-args "$ARGS" --build-id ${{ github.run_id }}
 
-      # - name: helm push
-      #   if: inputs.push-chart == true
-      #   run: |
-      #     #https://helm.sh/docs/helm/helm_push/
-      #     printf "\n\n>helm push ${{ github.workspace }}/artifacts/$CHART_NAME-$TAG.tgz oci://$REGISTRY/${{ inputs.chart-repository }}\n"
-      #     helm push ${{ github.workspace }}/artifacts/$CHART_NAME-$TAG.tgz oci://$REGISTRY/${{ inputs.chart-repository }}
+      - name: helm push
+        if: inputs.push-chart == true
+        run: |
+          #https://helm.sh/docs/helm/helm_push/
+          printf "\n\n>helm push ${{ github.workspace }}/artifacts/$CHART_NAME-$TAG.tgz oci://$CHART_REGISTRY/${{ inputs.chart-repository }}\n"
+          helm push ${{ github.workspace }}/artifacts/$CHART_NAME-$TAG.tgz oci://$CHART_REGISTRY/${{ inputs.chart-repository }}
