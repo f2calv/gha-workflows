@@ -75,29 +75,32 @@ jobs:
         run: |
           IMAGE_REGISTRY=${{ inputs.image-registry }}
           export IMAGE_REGISTRY=${IMAGE_REGISTRY,,}
+          echo "IMAGE_REGISTRY=$IMAGE_REGISTRY"
+
           IMAGE_REPOSITORY=${{ inputs.image-repository }}
           export IMAGE_REPOSITORY=${IMAGE_REPOSITORY,,}
-          export IMAGE_NAME=$(basename $IMAGE_REPOSITORY)
-
-          echo "IMAGE_REGISTRY=$IMAGE_REGISTRY"
           echo "IMAGE_REPOSITORY=$IMAGE_REPOSITORY"
+          
+          export IMAGE_NAME=$(basename $IMAGE_REPOSITORY)
           echo "IMAGE_NAME=$IMAGE_NAME"
 
           CHART_REGISTRY=${{ inputs.chart-registry }}
           export CHART_REGISTRY=${CHART_REGISTRY,,}
-          CHART_REPOSITORY=${{ inputs.chart-repository }}
-          export CHART_REPOSITORY=${CHART_REPOSITORY,,}
-          export CHART_NAME=$(basename $CHART_REPOSITORY)
-          
           echo "CHART_REGISTRY=$CHART_REGISTRY"
           echo "CHART_REGISTRY=$CHART_REGISTRY" >> $GITHUB_ENV
+
+          CHART_REPOSITORY=${{ inputs.chart-repository }}
+          export CHART_REPOSITORY=${CHART_REPOSITORY,,}
           echo "CHART_REPOSITORY=$CHART_REPOSITORY"
           echo "CHART_REPOSITORY=$CHART_REPOSITORY" >> $GITHUB_ENV
+
+          export CHART_NAME=$(basename $CHART_REPOSITORY)
           echo "CHART_NAME=$CHART_NAME"
           echo "CHART_NAME=$CHART_NAME" >> $GITHUB_ENV
 
           export CHART_PATH=${{ inputs.chart-path }}
           echo "CHART_PATH=$CHART_PATH"
+
           export TAG=${{ inputs.tag }}
           echo "TAG=$TAG"
           echo "TAG=$TAG" >> $GITHUB_ENV
@@ -199,5 +202,6 @@ jobs:
         if: inputs.push-chart == true
         run: |
           #https://helm.sh/docs/helm/helm_push/
-          printf "\n\n>helm push ${{ github.workspace }}/artifacts/$CHART_NAME-$TAG.tgz oci://$CHART_REGISTRY/$CHART_REPOSITORY\n"
-          helm push ${{ github.workspace }}/artifacts/$CHART_NAME-$TAG.tgz oci://$CHART_REGISTRY/$CHART_REPOSITORY
+          #printf "\n\n>helm push ${{ github.workspace }}/artifacts/$CHART_NAME-$TAG.tgz oci://$CHART_REGISTRY/$CHART_REPOSITORY\n"
+          #helm push ${{ github.workspace }}/artifacts/$CHART_NAME-$TAG.tgz oci://$CHART_REGISTRY/$CHART_REPOSITORY
+          helm push ${{ github.workspace }}/artifacts/$CHART_NAME-$TAG.tgz oci://$CHART_REGISTRY/f2calv
