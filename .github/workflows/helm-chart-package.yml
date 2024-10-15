@@ -19,6 +19,7 @@ on:
         type: string
       chart-registry-password:
         type: string
+        default: ${{ secrets.GITHUB_TOKEN }}
       chart-repository:
         type: string
         description: If unset we use the name of the current Git repository.
