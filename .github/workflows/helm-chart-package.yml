@@ -95,18 +95,21 @@ jobs:
           export CHART_REGISTRY_USERNAME=${{ inputs.chart-registry-username }}              # e.g. username
           export CHART_REGISTRY_PASSWORD=${{ secrets.GITHUB_TOKEN }}                        # its a secret!
           export CHART_REPOSITORY=$CHART_REPOSITORY                                         # e.g. f2calv/cas/charts/authenticator
+          export CHART_PATH=${{ inputs.chart-path }}
+          
           export CHART_NAME=$(basename $CHART_REPOSITORY)
           export CHART_REPOSITORY2=$(dirname $CHART_REPOSITORY)
-          export CHART_PATH=${{ inputs.chart-path }}
 
+          echo "TAG=$TAG"
+          echo "TAG_OVERRIDE=$TAG_OVERRIDE"
           echo "IMAGE_REGISTRY=$IMAGE_REGISTRY"
           echo "IMAGE_REPOSITORY=$IMAGE_REPOSITORY"
           echo "CHART_REGISTRY=$CHART_REGISTRY"
           echo "CHART_REPOSITORY=$CHART_REPOSITORY"
+          echo "CHART_PATH=$CHART_PATH"
+
           echo "CHART_NAME=$CHART_NAME"
           echo "CHART_REPOSITORY2=$CHART_REPOSITORY2"
-          echo "CHART_PATH=$CHART_PATH"
-          echo "TAG=$TAG"
 
           echo "CHART_REGISTRY=$CHART_REGISTRY" >> $GITHUB_ENV
           echo "CHART_REPOSITORY=$CHART_REPOSITORY" >> $GITHUB_ENV
