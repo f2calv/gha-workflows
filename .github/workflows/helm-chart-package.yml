@@ -101,8 +101,10 @@ jobs:
           export IMAGE_PREFIX=$IMAGE_REGISTRY/$IMAGE_REPOSITORY                             # e.g. ghcr.io/username/imagename
           if [[ -z "$TAG_OVERRIDE" ]]; then
             export IMAGE=$IMAGE_PREFIX:$TAG                                                 # e.g. ghcr.io/username/imagename:1.2.3
+            LABEL=$IMAGE_REPOSITORY-$TAG                                                    # e.g. username/imagename:1.2.3
           else
             export IMAGE=$IMAGE_PREFIX:$TAG_OVERRIDE                                        # e.g. ghcr.io/username/imagename:latest-dev
+            LABEL=$IMAGE_REPOSITORY-$TAG                                                    # e.g. username/imagename:latest-dev
           fi
           export CHART_NAME=$(basename $CHART_PATH)
           export CHART_REPOSITORY_PREFIX=$(dirname $CHART_REPOSITORY)
@@ -115,16 +117,16 @@ jobs:
           echo "CHART_REPOSITORY=$CHART_REPOSITORY"
           echo "CHART_PATH=$CHART_PATH"
 
+          echo "IMAGE_PREFIX=$IMAGE_PREFIX"
+          echo "IMAGE=$IMAGE"
           echo "CHART_NAME=$CHART_NAME"
           echo "CHART_REPOSITORY_PREFIX=$CHART_REPOSITORY_PREFIX"
 
           echo "CHART_REGISTRY=$CHART_REGISTRY" >> $GITHUB_ENV
-          echo "CHART_REPOSITORY=$CHART_REPOSITORY" >> $GITHUB_ENV
-          echo "CHART_NAME=$CHART_NAME" >> $GITHUB_ENV
           echo "CHART_REPOSITORY_PREFIX=$CHART_REPOSITORY_PREFIX" >> $GITHUB_ENV
+          echo "CHART_NAME=$CHART_NAME" >> $GITHUB_ENV
           echo "TAG=$TAG" >> $GITHUB_ENV
 
-          LABEL=$IMAGE_REPOSITORY-$TAG
           if [[ "${#LABEL}" -gt 63 ]]; then
             echo "::error::RFC 1123 Label Names maximum length of 63 characters reached for '$LABEL', suggest shortening your repository or branch name."
             exit 1
