@@ -3,6 +3,13 @@ name: helm-chart-package
 on:
   workflow_call:
     inputs:
+      tag:
+        type: string
+        description: e.g. 1.2.3
+        required: true
+      tag-override:
+        type: string
+        description: e.g. latest, latest-dev
       image-registry:
         type: string
         description: e.g. ghcr.io, xyz.azurecr.io or docker.io
@@ -23,13 +30,6 @@ on:
         type: string
         description: If unset we use the name of the current Git repository.
         required: true
-      tag:
-        type: string
-        description: e.g. 1.2.3
-        required: true
-      tag-override:
-        type: string
-        description: e.g. latest, latest-dev
       chart-path:
         type: string
         description: Relative path to the charts folder in the Git repository.
@@ -77,41 +77,41 @@ jobs:
 
       - name: helm build/lint/package
         run: |
+          #force to lowercase
           IMAGE_REGISTRY=${{ inputs.image-registry }}
-          export IMAGE_REGISTRY=${IMAGE_REGISTRY,,}
-          echo "IMAGE_REGISTRY=$IMAGE_REGISTRY"
-
+          IMAGE_REGISTRY=${IMAGE_REGISTRY,,}
           IMAGE_REPOSITORY=${{ inputs.image-repository }}
-          export IMAGE_REPOSITORY=${IMAGE_REPOSITORY,,}
-          echo "IMAGE_REPOSITORY=$IMAGE_REPOSITORY"
-          
+          IMAGE_REPOSITORY=${IMAGE_REPOSITORY,,}
           CHART_REGISTRY=${{ inputs.chart-registry }}
-          export CHART_REGISTRY=${CHART_REGISTRY,,}
-          export CHART_REGISTRY=${{ inputs.chart-registry }}                                # e.g. ghcr.io
-          echo "CHART_REGISTRY=$CHART_REGISTRY"
-          echo "CHART_REGISTRY=$CHART_REGISTRY" >> $GITHUB_ENV
-
-          export CHART_REGISTRY_USERNAME=${{ inputs.chart-registry-username }}              # e.g. username
-          export CHART_REGISTRY_PASSWORD=${{ secrets.GITHUB_TOKEN }}              # its a secret!
-
+          CHART_REGISTRY=${CHART_REGISTRY,,}
           CHART_REPOSITORY=${{ inputs.chart-repository }}
-          export CHART_REPOSITORY=${CHART_REPOSITORY,,}
-          echo "CHART_REPOSITORY=$CHART_REPOSITORY"
-          echo "CHART_REPOSITORY=$CHART_REPOSITORY" >> $GITHUB_ENV
+          CHART_REPOSITORY=${CHART_REPOSITORY,,}
 
+          export TAG=${{ inputs.tag }}                                                      # e.g. 1.2.3
+          export TAG_OVERRIDE=${{ inputs.tag-override }}                                    # e.g. latest, latest-dev
+          export IMAGE_REGISTRY=$IMAGE_REGISTRY                                             # e.g. ghcr.io
+          export IMAGE_REPOSITORY=$IMAGE_REPOSITORY                                         # e.g. username/imagename
+          export CHART_REGISTRY=$CHART_REGISTRY                                             # e.g. ghcr.io
+          export CHART_REGISTRY_USERNAME=${{ inputs.chart-registry-username }}              # e.g. username
+          export CHART_REGISTRY_PASSWORD=${{ secrets.GITHUB_TOKEN }}                        # its a secret!
+          export CHART_REPOSITORY=$CHART_REPOSITORY                                         # e.g. f2calv/cas/charts/authenticator
           export CHART_NAME=$(basename $CHART_REPOSITORY)
-          echo "CHART_NAME=$CHART_NAME"
-          echo "CHART_NAME=$CHART_NAME" >> $GITHUB_ENV
-
           export CHART_REPOSITORY2=$(dirname $CHART_REPOSITORY)
-          echo "CHART_REPOSITORY2=$CHART_REPOSITORY2"
-          echo "CHART_REPOSITORY2=$CHART_REPOSITORY2" >> $GITHUB_ENV
-
           export CHART_PATH=${{ inputs.chart-path }}
-          echo "CHART_PATH=$CHART_PATH"
 
-          export TAG=${{ inputs.tag }}
+          echo "IMAGE_REGISTRY=$IMAGE_REGISTRY"
+          echo "IMAGE_REPOSITORY=$IMAGE_REPOSITORY"
+          echo "CHART_REGISTRY=$CHART_REGISTRY"
+          echo "CHART_REPOSITORY=$CHART_REPOSITORY"
+          echo "CHART_NAME=$CHART_NAME"
+          echo "CHART_REPOSITORY2=$CHART_REPOSITORY2"
+          echo "CHART_PATH=$CHART_PATH"
           echo "TAG=$TAG"
+
+          echo "CHART_REGISTRY=$CHART_REGISTRY" >> $GITHUB_ENV
+          echo "CHART_REPOSITORY=$CHART_REPOSITORY" >> $GITHUB_ENV
+          echo "CHART_NAME=$CHART_NAME" >> $GITHUB_ENV
+          echo "CHART_REPOSITORY2=$CHART_REPOSITORY2" >> $GITHUB_ENV
           echo "TAG=$TAG" >> $GITHUB_ENV
 
           LABEL=$IMAGE_REPOSITORY-$TAG
