@@ -57,7 +57,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: setup helm (1 of 2) #pull version from devcontainer.json
+      - name: setup helm (1 of 3)
+        run: |
+          FILE=.devcontainer/devcontainer.json
+          if [[ -f "$FILE" ]]; then
+            echo "$FILE exists"
+          else
+            echo "::error file=.devcontainer/devcontainer.json::helm version is managed by the devcontainer.json, '$FILE' is therefore required!"
+          fi
+
+      - name: setup helm (2 of 3) #pull version from devcontainer.json
         run: |
           npm install --global json5
           json5 -c .devcontainer/devcontainer.json
@@ -66,14 +75,10 @@ jobs:
           echo "VERSION_TO_INSTALL=$VERSION_TO_INSTALL" >> $GITHUB_ENV
           echo "VERSION_TO_INSTALL=$VERSION_TO_INSTALL"
 
-      - name: setup helm (2 of 2)
+      - name: setup helm (3 of 3)
         uses: azure/setup-helm@v4
         with:
           version: ${{ env.VERSION_TO_INSTALL }}
-
-      # - name: set vars
-      #   run: |
-          
 
       - name: helm build/lint/package
         run: |
@@ -152,14 +157,14 @@ jobs:
             yq -i '.image.tag = env(TAG)' $CHART_PATH/values.yaml
 
             printf "\n\nAdd git repository context in the values.yaml before packaging...\n"
-            yq -i '.git.repository=env(GITHUB_REPOSITORY)' $CHART_PATH/values.yaml
-            yq -i '.git.branch=env(GITHUB_REF)' $CHART_PATH/values.yaml
-            yq -i '.git.commit=env(GITHUB_SHA)' $CHART_PATH/values.yaml
+            yq -i '.env.GITHUB_REPOSITORY=env(GITHUB_REPOSITORY)' $CHART_PATH/values.yaml
+            yq -i '.env.GITHUB_REF=env(GITHUB_REF)' $CHART_PATH/values.yaml
+            yq -i '.env.GITHUB_SHA=env(GITHUB_SHA)' $CHART_PATH/values.yaml
 
             printf "\n\nAdd github context in the values.yaml before packaging...\n"
-            yq -i '.github.workflow=env(GITHUB_WORKFLOW)' $CHART_PATH/values.yaml
-            yq -i '.github.run_id=env(GITHUB_RUN_ID)' $CHART_PATH/values.yaml
-            yq -i '.github.run_number=env(GITHUB_RUN_NUMBER)' $CHART_PATH/values.yaml
+            yq -i '.env.GITHUB_WORKFLOW=env(GITHUB_WORKFLOW)' $CHART_PATH/values.yaml
+            yq -i '.env.GITHUB_RUN_ID=env(GITHUB_RUN_ID)' $CHART_PATH/values.yaml
+            yq -i '.env.GITHUB_RUN_NUMBER=env(GITHUB_RUN_NUMBER)' $CHART_PATH/values.yaml
 
             cat $CHART_PATH/values.yaml
           fi
