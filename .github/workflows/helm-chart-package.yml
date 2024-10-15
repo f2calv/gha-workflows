@@ -15,6 +15,10 @@ on:
         type: string
         description: e.g. ghcr.io, xyz.azurecr.io or docker.io
         required: true
+      chart-registry-username:
+        type: string
+      chart-registry-password:
+        type: string
       chart-repository:
         type: string
         description: If unset we use the name of the current Git repository.
@@ -114,8 +118,8 @@ jobs:
           printf "\n\n>helm version\n"
           helm version
 
-          printf "\n\n>helm registry login $CHART_REGISTRY/$CHART_REPOSITORY --username ${{ github.repository_owner }} --password-stdin\n"
-          printf ${{ secrets.GITHUB_TOKEN }} | helm registry login $CHART_REGISTRY/$CHART_REPOSITORY --username ${{ github.repository_owner }} --password-stdin
+          printf "\n\n>${{ inputs.chart-registry-password }} | helm registry login $CHART_REGISTRY/$CHART_REPOSITORY --username ${{ inputs.chart-registry-username }} --password-stdin\n"
+          printf ${{ inputs.chart-registry-password }} | helm registry login $CHART_REGISTRY/$CHART_REPOSITORY --username ${{ inputs.chart-registry-username }} --password-stdin
           #printf $servicePrincipalKey | helm registry login $CHART_REGISTRY --username $servicePrincipalId --password-stdin
 
           printf "\n\nUpdate the version+appVersion in the Chart.yaml before packaging...\n"
