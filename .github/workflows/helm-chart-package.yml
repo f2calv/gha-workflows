@@ -163,7 +163,7 @@ jobs:
 
             printf "\n\nAdd github context in the values.yaml before packaging...\n"
             yq -i '.env.GITHUB_WORKFLOW=env(GITHUB_WORKFLOW)' $CHART_PATH/values.yaml
-            yq -i '.env.GITHUB_RUN_ID=env(GITHUB_RUN_ID)' $CHART_PATH/values.yaml
+            yq -i '.env.GITHUB_RUN_ID=env(GITHUB_RUN_ID) | .env.GITHUB_RUN_ID style="double"' $CHART_PATH/values.yaml
             yq -i '.env.GITHUB_RUN_NUMBER=env(GITHUB_RUN_NUMBER)' $CHART_PATH/values.yaml
 
             cat $CHART_PATH/values.yaml
