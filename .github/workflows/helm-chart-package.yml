@@ -104,7 +104,7 @@ jobs:
           else
             export IMAGE=$IMAGE_PREFIX:$TAG_OVERRIDE                                        # e.g. ghcr.io/username/imagename:latest-dev
           fi
-          export CHART_NAME=$(basename $CHART_REPOSITORY)
+          export CHART_NAME=$(basename $CHART_PATH)
           export CHART_REPOSITORY_PREFIX=$(dirname $CHART_REPOSITORY)
 
           echo "TAG=$TAG"
