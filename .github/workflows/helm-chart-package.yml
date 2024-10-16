@@ -150,7 +150,7 @@ jobs:
           #printf $servicePrincipalKey | helm registry login $CHART_REGISTRY --username $servicePrincipalId --password-stdin
 
           printf "\n\nUpdate the local chart dependencies in the Chart.yaml\n"
-          if [[ ! -z "$DEPENDENCY_NAME" ]; then
+          if [[ ! -z "$DEPENDENCY_NAME" ]]; then
             yq -i '(.dependencies.[] | select(.name == env(DEPENDENCY_NAME)) | .version) = env(TAG)' $CHART_PATH/Chart.yaml
             export DEPENDENCY_REPOSITORY=oci://$CHART_REGISTRY/$CHART_REPOSITORY_PREFIX
             printf "\nDEPENDENCY_REPOSITORY=$DEPENDENCY_REPOSITORY"
