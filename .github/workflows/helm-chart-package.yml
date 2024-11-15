@@ -170,14 +170,14 @@ jobs:
             yq -i '.image.tag = env(TAG)' $CHART_PATH/values.yaml
 
             printf "\n\nAdd git repository context in the values.yaml\n"
-            yq -i '.env.GITHUB_REPOSITORY=env(GITHUB_REPOSITORY)' $CHART_PATH/values.yaml
-            yq -i '.env.GITHUB_REF=env(GITHUB_REF)' $CHART_PATH/values.yaml
-            yq -i '.env.GITHUB_SHA=env(GITHUB_SHA)' $CHART_PATH/values.yaml
+            yq -i '.envVars.GITHUB_REPOSITORY=env(GITHUB_REPOSITORY)' $CHART_PATH/values.yaml
+            yq -i '.envVars.GITHUB_REF=env(GITHUB_REF)' $CHART_PATH/values.yaml
+            yq -i '.envVars.GITHUB_SHA=env(GITHUB_SHA)' $CHART_PATH/values.yaml
 
             printf "\n\nAdd github context in the values.yaml\n"
-            yq -i '.env.GITHUB_WORKFLOW=env(GITHUB_WORKFLOW)' $CHART_PATH/values.yaml
-            yq -i '.env.GITHUB_RUN_ID=env(GITHUB_RUN_ID) | .env.GITHUB_RUN_ID style="double"' $CHART_PATH/values.yaml
-            yq -i '.env.GITHUB_RUN_NUMBER=env(GITHUB_RUN_NUMBER)' $CHART_PATH/values.yaml
+            yq -i '.envVars.GITHUB_WORKFLOW=env(GITHUB_WORKFLOW)' $CHART_PATH/values.yaml
+            yq -i '.envVars.GITHUB_RUN_ID=env(GITHUB_RUN_ID) | .envVars.GITHUB_RUN_ID style="double"' $CHART_PATH/values.yaml
+            yq -i '.envVars.GITHUB_RUN_NUMBER=env(GITHUB_RUN_NUMBER)' $CHART_PATH/values.yaml
 
             cat $CHART_PATH/values.yaml
           fi
