@@ -15,7 +15,15 @@ on:
         type: string
         description: e.g. MySolution.sln or MyProject.csproj
         default: ''
-
+      dotnet-restore-args:
+        type: string
+        description: Optional 'dotnet restore' arguments.
+        default: ''
+      dotnet-build-args:
+        type: string
+        description: Optional 'dotnet build' arguments.
+        default: ''
+      
 jobs:
   app-build-dotnet:
     runs-on: ubuntu-latest
@@ -26,9 +34,9 @@ jobs:
           fetch-depth: 0
 
       - name: dotnet restore
-        run: dotnet restore ${{ inputs.solution-name }} --verbosity minimal
+        run: dotnet restore ${{ inputs.solution-name }} --verbosity minimal ${{ inputs.dotnet-restore-args }}
 
       - name: dotnet build
-        run: dotnet build ${{ inputs.solution-name }} -c ${{ inputs.configuration }} --nologo --no-restore -p:Version='${{ inputs.fullSemVer }}' -p:SourceRevisionId=${{ github.sha }}
+        run: dotnet build ${{ inputs.solution-name }} -c ${{ inputs.configuration }} --nologo --no-restore -p:Version='${{ inputs.fullSemVer }}' -p:SourceRevisionId=${{ github.sha }} ${{ inputs.dotnet-build-args }}
 
       #TODO: could run dotnet test here, etc...
