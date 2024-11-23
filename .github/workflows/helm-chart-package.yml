@@ -104,7 +104,7 @@ jobs:
           export CHART_REGISTRY=$CHART_REGISTRY                                             # e.g. ghcr.io
           export CHART_REGISTRY_USERNAME=${{ inputs.chart-registry-username }}              # e.g. username
           export CHART_REGISTRY_PASSWORD=${{ secrets.GITHUB_TOKEN }}                        # its a secret!
-          export CHART_REPOSITORY=$CHART_REPOSITORY                                         # e.g. f2calv/cas/charts/authenticator
+          export CHART_REPOSITORY=$CHART_REPOSITORY                                         # e.g. f2calv/xyz/charts/myapp
           export CHART_PATH=${{ inputs.chart-path }}
           export CHART_DEPENDENCY=${{ inputs.chart-dependency-name }}
           
