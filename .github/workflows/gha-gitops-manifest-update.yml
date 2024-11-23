@@ -55,12 +55,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
+          fetch-depth: 0
           repository: ${{ inputs.git-repository }}
           token: ${{ secrets.git-repository-token }}
 
       #Note: below workflow code left in place to show how to access a local action from inside a reuseable workflow, i.e. messy!
       # - uses: actions/checkout@v4
       #   with:
+      #     fetch-depth: 0
       #     repository: f2calv/gha-workflows #Note: this repo name
       #     ref: ${{ github.ref_name }} #Note: assumes that the ref repo has an identical branch name to the calling branch
       #     path: workflows

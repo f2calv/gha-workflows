@@ -69,6 +69,8 @@ jobs:
     #https://docs.github.com/en/actions/using-jobs/assigning-permissions-to-jobs
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: github private packages auth
         if: inputs.github-private-packages-auth == true
