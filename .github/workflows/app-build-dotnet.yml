@@ -33,6 +33,12 @@ jobs:
         with:
           fetch-depth: 0
 
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            8.0.x
+            9.0.x
+
       - name: dotnet restore
         run: dotnet restore ${{ inputs.solution-name }} --verbosity minimal ${{ inputs.dotnet-restore-args }}
 
