@@ -68,7 +68,7 @@ jobs:
     #https://github.blog/changelog/2021-04-20-github-actions-control-permissions-for-github_token/
     #https://docs.github.com/en/actions/using-jobs/assigning-permissions-to-jobs
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
