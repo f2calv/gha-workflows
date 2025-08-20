@@ -74,7 +74,7 @@ jobs:
       patch: ${{ steps.gha-release-versioning.outputs.patch }}
       release-exists: ${{ steps.gha-release-versioning.outputs.release-exists }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
