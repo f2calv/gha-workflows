@@ -23,7 +23,7 @@ on:
         type: string
         description: Optional 'dotnet build' arguments.
         default: ''
-      
+
 jobs:
   app-build-dotnet:
     runs-on: ubuntu-latest
