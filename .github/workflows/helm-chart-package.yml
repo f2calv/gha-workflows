@@ -1,4 +1,4 @@
-name: helm-chart-package
+name: _helm-chart-package
 
 on:
   workflow_call:

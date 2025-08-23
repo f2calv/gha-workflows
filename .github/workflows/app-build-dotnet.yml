@@ -1,4 +1,4 @@
-name: app-build-dotnet
+name: _app-build-dotnet
 
 on:
   workflow_call:

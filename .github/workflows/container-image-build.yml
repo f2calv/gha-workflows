@@ -1,4 +1,4 @@
-name: container-image-build
+name: _container-image-build
 #Note: this uses buildx for multiarchitecture builds, maybe make an opt-out for this in the future?
 
 on:
