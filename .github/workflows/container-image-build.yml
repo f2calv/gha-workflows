@@ -153,3 +153,5 @@ jobs:
             --pull \
             "${ARGS[@]}" \
             .
+        env:
+          BUILDX_NO_DEFAULT_ATTESTATIONS: 1 #Note: fixes publishing container architecture 'unknown/unknown'
