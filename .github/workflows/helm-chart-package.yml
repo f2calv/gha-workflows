@@ -1,4 +1,4 @@
-name: helm-chart-package
+name: _helm-chart-package
 
 on:
   workflow_call:
@@ -107,7 +107,7 @@ jobs:
           export CHART_REPOSITORY=$CHART_REPOSITORY                                         # e.g. f2calv/xyz/charts/myapp
           export CHART_PATH=${{ inputs.chart-path }}
           export CHART_DEPENDENCY=${{ inputs.chart-dependency-name }}
-          
+
           #custom variables derived from inputs
           export IMAGE_PREFIX=$IMAGE_REGISTRY/$IMAGE_REPOSITORY                             # e.g. ghcr.io/username/imagename
           if [[ -z "$TAG_OVERRIDE" ]]; then
@@ -171,13 +171,13 @@ jobs:
             yq -i '.image.repository = env(IMAGE_PREFIX)' $CHART_PATH/values.yaml
             yq -i '.image.tag = env(TAG)' $CHART_PATH/values.yaml
 
-            printf "\n\nAdd git repository context in the values.yaml\n"
+            printf "\n\nAppend git repository context to the values.yaml\n"
             yq -i '.envVars.GIT_TAG=env(TAG)' $CHART_PATH/values.yaml
             yq -i '.envVars.GIT_REPOSITORY=env(GITHUB_REPOSITORY)' $CHART_PATH/values.yaml
             yq -i '.envVars.GIT_BRANCH=env(GITHUB_REF)' $CHART_PATH/values.yaml
             yq -i '.envVars.GIT_COMMIT=env(GITHUB_SHA)' $CHART_PATH/values.yaml
 
-            printf "\n\nAdd github context in the values.yaml\n"
+            printf "\n\nAppend github workflow context to the values.yaml\n"
             yq -i '.envVars.GITHUB_WORKFLOW=env(GITHUB_WORKFLOW)' $CHART_PATH/values.yaml
             yq -i '.envVars.GITHUB_RUN_ID=env(GITHUB_RUN_ID) | .envVars.GITHUB_RUN_ID style="double"' $CHART_PATH/values.yaml
             yq -i '.envVars.GITHUB_RUN_NUMBER=env(GITHUB_RUN_NUMBER)' $CHART_PATH/values.yaml

@@ -1,4 +1,4 @@
-name: gha-gitops-manifest-update
+name: _gha-gitops-manifest-update
 
 on:
   workflow_call:

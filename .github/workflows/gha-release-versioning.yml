@@ -1,4 +1,4 @@
-name: gha-release-versioning
+name: _gha-release-versioning
 #Note: Workflow is called by other workflows to a) determine a semantic version, b) tag the repo with this create a semantic version and c) create a release.
 
 on:

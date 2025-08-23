@@ -1,4 +1,4 @@
-name: dotnet-publish-nuget
+name: _dotnet-publish-nuget
 
 on:
   workflow_call:

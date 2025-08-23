@@ -1,4 +1,4 @@
-name: app-build-rust
+name: _app-build-rust
 
 on:
   workflow_call:
