@@ -58,7 +58,7 @@ jobs:
   helm-chart-package:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
@@ -152,11 +152,11 @@ jobs:
           #printf $servicePrincipalKey | helm registry login $CHART_REGISTRY --username $servicePrincipalId --password-stdin
 
           printf "\n\nUpdate the local chart dependencies in the Chart.yaml\n"
-          if [[ ! -z "$DEPENDENCY_NAME" ]]; then
-            yq -i '(.dependencies.[] | select(.name == env(DEPENDENCY_NAME)) | .version) = env(TAG)' $CHART_PATH/Chart.yaml
+          if [[ ! -z "$CHART_DEPENDENCY" ]]; then
+            yq -i '(.dependencies.[] | select(.name == env(CHART_DEPENDENCY)) | .version) = env(TAG)' $CHART_PATH/Chart.yaml
             export DEPENDENCY_REPOSITORY=oci://$CHART_REGISTRY/$CHART_REPOSITORY_PREFIX
             printf "\nDEPENDENCY_REPOSITORY=$DEPENDENCY_REPOSITORY"
-            yq -i '(.dependencies.[] | select(.name == env(DEPENDENCY_NAME)) | .repository) = env(DEPENDENCY_REPOSITORY)' $CHART_PATH/Chart.yaml
+            yq -i '(.dependencies.[] | select(.name == env(CHART_DEPENDENCY)) | .repository) = env(DEPENDENCY_REPOSITORY)' $CHART_PATH/Chart.yaml
           fi
 
           printf "\n\nUpdate the version+appVersion in the Chart.yaml\n"
