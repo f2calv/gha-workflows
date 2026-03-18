@@ -40,6 +40,10 @@ jobs:
             9.0.x
             10.0.x
 
+      - name: dotnet workload restore
+        if: inputs.solution-name != ''
+        run: dotnet workload restore ${{ inputs.solution-name }}
+
       - name: dotnet restore
         run: dotnet restore ${{ inputs.solution-name }} --verbosity minimal ${{ inputs.dotnet-restore-args }}
 
