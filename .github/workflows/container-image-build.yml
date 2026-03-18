@@ -58,7 +58,7 @@ on:
         default: true
       github-private-packages-auth:
         type: boolean
-        description: Set to true when you want to acccess private nuget packages in a private github packages feed.
+        description: Set to true when you want to access private nuget packages in a private github packages feed.
         default: false
 
 jobs:
