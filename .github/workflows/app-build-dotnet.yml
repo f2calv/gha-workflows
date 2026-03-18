@@ -41,7 +41,6 @@ jobs:
             10.0.x
 
       - name: dotnet workload restore
-        if: inputs.solution-name != ''
         run: dotnet workload restore ${{ inputs.solution-name }}
 
       - name: dotnet restore
