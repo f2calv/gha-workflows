@@ -69,6 +69,7 @@ jobs:
             echo "$FILE exists"
           else
             echo "::error file=.devcontainer/devcontainer.json::helm version is managed by the devcontainer.json, '$FILE' is therefore required!"
+            exit 1
           fi
 
       - name: setup helm (2 of 3) #pull version from devcontainer.json
