@@ -45,7 +45,7 @@ on:
       chart-testing-cli-version:
         type: string
         description: See https://quay.io/repository/helmpack/chart-testing?tab=tags
-        default: latest
+        default: v3.11.0
       chart-testing-cli-command:
         type: string
         description: Accepts lint or install. Default is lint.
