@@ -45,7 +45,7 @@ on:
       chart-testing-cli-version:
         type: string
         description: See https://quay.io/repository/helmpack/chart-testing?tab=tags
-        default: v3.11.0
+        default: latest
       chart-testing-cli-command:
         type: string
         description: Accepts lint or install. Default is lint.
@@ -229,7 +229,7 @@ jobs:
           docker run --rm --network host --workdir=/data --volume ~/.kube/config:/root/.kube/config:ro \
             --volume $(pwd):/data quay.io/helmpack/chart-testing:${{ inputs.chart-testing-cli-version }} \
             ct ${{ inputs.chart-testing-cli-command }} --charts $CHART_PATH \
-            --helm-extra-args "$ARGS" --validate-maintainers=false
+            --helm-lint-extra-args "$ARGS" --validate-maintainers=false
 
       #https://github.com/helm/chart-testing/blob/main/doc/ct_install.md
       - name: chart-testing (install)
