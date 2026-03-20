@@ -225,7 +225,7 @@ jobs:
       - name: chart-testing (lint)
         if: inputs.chart-testing-cli-command == 'lint'
         run: |
-          ARGS="--set=image.tag=$TAG"
+          ARGS="--set image.tag=$TAG"
           docker run --rm --network host --workdir=/data --volume ~/.kube/config:/root/.kube/config:ro \
             --volume $(pwd):/data quay.io/helmpack/chart-testing:${{ inputs.chart-testing-cli-version }} \
             ct ${{ inputs.chart-testing-cli-command }} --charts $CHART_PATH \
@@ -236,9 +236,9 @@ jobs:
         if: inputs.chart-testing-cli-command == 'install' && inputs.is-library-chart == false
         run: |
           #Note: we can only fully install the chart if we have pushed the image as well, assumption inputs.push-chart == inputs.push-image
-          ARGS="--set=image.tag=$TAG"
+          ARGS="--set image.tag=$TAG"
           if [[ "${{ inputs.push-chart }}" == "false" ]]; then
-            ARGS="--set=image.repository=nginx --set=image.tag=latest"
+            ARGS="--set image.repository=nginx --set image.tag=latest"
           fi
           docker run --rm --network host --workdir=/data --volume ~/.kube/config:/root/.kube/config:ro \
             --volume $(pwd):/data quay.io/helmpack/chart-testing:${{ inputs.chart-testing-cli-version }} \
