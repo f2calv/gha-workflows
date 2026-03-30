@@ -82,7 +82,7 @@ jobs:
           echo "VERSION_TO_INSTALL=$VERSION_TO_INSTALL"
 
       - name: setup helm (3 of 3)
-        uses: azure/setup-helm@v4
+        uses: azure/setup-helm@v5
         with:
           version: ${{ env.VERSION_TO_INSTALL }}
 
