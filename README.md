@@ -91,7 +91,7 @@ flowchart LR
     classDef f2calv fill:#dbeafe,stroke:#2563eb,color:#1e3a5f
     W(["_helm-chart-package"]) --> J["helm-chart-package"]
     J --> A1["actions/checkout@v6"]
-    J --> A2["azure/setup-helm@v4"]
+    J --> A2["azure/setup-helm@v5"]
     J --> A3["helm/kind-action@v1"]
 ```
 
