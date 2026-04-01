@@ -13,7 +13,7 @@ jobs:
   build:
     uses: f2calv/gha-workflows/.github/workflows/app-build-dotnet.yml@v1
     with:
-      fullSemVer: ${{ needs.versioning.outputs.fullSemVer }}
+      version: ${{ needs.versioning.outputs.version }}
       solution-name: MySolution.slnx
 ```
 
@@ -23,8 +23,8 @@ jobs:
 
 | Workflow | Description | Key Inputs |
 | --- | --- | --- |
-| [App Build .NET](.github/workflows/app-build-dotnet.yml) | Restore, workload restore, build a .NET solution/project. Installs .NET 8/9/10 SDKs. | `fullSemVer` (required), `solution-name`, `configuration`, `dotnet-restore-args`, `dotnet-build-args` |
-| [App Build Rust](.github/workflows/app-build-rust.yml) | Format check, clippy lint, fetch and build a Rust project. | `fullSemVer` (required) |
+| [App Build .NET](.github/workflows/app-build-dotnet.yml) | Restore, workload restore, build a .NET solution/project. Installs .NET 8/9/10 SDKs. | `version` (required), `solution-name`, `configuration`, `dotnet-restore-args`, `dotnet-build-args` |
+| [App Build Rust](.github/workflows/app-build-rust.yml) | Format check, clippy lint, fetch and build a Rust project. | `version` (required) |
 
 ### Containers & Helm
 
@@ -32,7 +32,7 @@ jobs:
 | --- | --- | --- |
 | [Container Image Build](.github/workflows/container-image-build.yml) | Multi-architecture buildx build and push to a container registry (ghcr.io, ACR, Docker Hub). Tags with semver, major, minor and latest. | `registry` (required), `tag` (required), `tag-major` (required), `tag-minor` (required), `platform`, `push-image` |
 | [Helm Chart Package](.github/workflows/helm-chart-package.yml) | Lint, package and push a Helm chart to an OCI registry. Helm version is sourced from `.devcontainer/devcontainer.json`. | `tag` (required), `image-registry` (required), `chart-registry` (required), `chart-repository` (required), `chart-path` |
-| [GitOps Manifest Update](.github/workflows/gha-gitops-manifest-update.yml) | Update image tags in a GitOps repository via [f2calv/gha-gitops-manifest-update](https://github.com/f2calv/gha-gitops-manifest-update). | `registry` (required), `repository` (required), `tag` (required), `manifest` (required), `manifest-path` (required) |
+| [GitOps Manifest Update](.github/workflows/gha-gitops-manifest-update.yml) | Update image tags in a GitOps repository via [f2calv/gha-gitops-manifest-update](https://github.com/f2calv/gha-gitops-manifest-update). | `tag` (required), `image-registry` (required), `image-repository` (required), `manifest-paths` (required), `namespace` (required) |
 
 ### NuGet
 
