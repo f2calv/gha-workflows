@@ -51,7 +51,7 @@ on:
       gitops-repo-path:
         type: string
         description: Path where the GitOps repository is checked-out to.
-        default: gitops/
+        default: .
       gitops-repo-branch:
         type: string
         description: e.g. main
