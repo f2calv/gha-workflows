@@ -102,7 +102,7 @@ flowchart LR
     classDef f2calv fill:#dbeafe,stroke:#2563eb,color:#1e3a5f
     W(["_gha-gitops-manifest-update"]) --> J["gha-gitops-manifest-update"]
     J --> A1["actions/checkout@v6"]
-    J --> A2["f2calv/gha-gitops-manifest-update@v1"]
+    J --> A2["f2calv/gha-gitops-manifest-update@v2"]
     class A2 f2calv
 ```
 
