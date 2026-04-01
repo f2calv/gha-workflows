@@ -41,14 +41,8 @@ on:
         default: actions
     outputs:
       version:
-        description: e.g. 1.2.301
+        description: e.g. 1.2.301-feature-my-feature.12+56
         value: ${{ jobs.gha-release-versioning.outputs.version }}
-      semVer:
-        description: e.g. 1.2.301
-        value: ${{ jobs.gha-release-versioning.outputs.semVer }}
-      fullSemVer:
-        description: e.g. 1.2.301-feature-my-feature.12
-        value: ${{ jobs.gha-release-versioning.outputs.fullSemVer }}
       major:
         description: e.g. 1
         value: ${{ jobs.gha-release-versioning.outputs.major }}
@@ -67,8 +61,6 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.gha-release-versioning.outputs.version }}
-      semVer: ${{ steps.gha-release-versioning.outputs.semVer }}
-      fullSemVer: ${{ steps.gha-release-versioning.outputs.fullSemVer }}
       major: ${{ steps.gha-release-versioning.outputs.major }}
       minor: ${{ steps.gha-release-versioning.outputs.minor }}
       patch: ${{ steps.gha-release-versioning.outputs.patch }}
