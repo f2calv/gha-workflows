@@ -52,7 +52,7 @@ jobs:
 | --- | --- | --- |
 | [Lint](.github/workflows/lint.yml) | Run [pre-commit](https://pre-commit.com/) hooks against all files in the repository. | `pre-commit-version` |
 
-## Dependency Diagrams
+## Deployment Flow
 
 Mermaid diagrams showing the action dependency chain for each workflow. Actions and workflows owned by [f2calv](https://github.com/f2calv) are highlighted in blue.
 
