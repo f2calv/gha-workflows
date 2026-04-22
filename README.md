@@ -23,14 +23,14 @@ jobs:
 
 | Workflow | Description | Key Inputs |
 | --- | --- | --- |
-| [App Build .NET](.github/workflows/app-build-dotnet.yml) | Restore, workload restore, build a .NET solution/project. Installs .NET 8/9/10 SDKs. | `version` (required), `solution-name`, `configuration`, `dotnet-restore-args`, `dotnet-build-args` |
+| [App Build .NET](.github/workflows/app-build-dotnet.yml) | Restore, workload restore, build a .NET solution/project. Installs .NET 8/9/10 SDKs. Optionally clones extra repositories into the build context. | `version` (required), `solution-name`, `configuration`, `dotnet-restore-args`, `dotnet-build-args`, `extra-repos` |
 | [App Build Rust](.github/workflows/app-build-rust.yml) | Format check, clippy lint, fetch and build a Rust project. | `version` (required) |
 
 ### Containers & Helm
 
 | Workflow | Description | Key Inputs |
 | --- | --- | --- |
-| [Container Image Build](.github/workflows/container-image-build.yml) | Multi-architecture buildx build and push to a container registry (ghcr.io, ACR, Docker Hub). Tags with semver, major, minor and latest. | `registry` (required), `tag` (required), `tag-major` (required), `tag-minor` (required), `platform`, `push-image` |
+| [Container Image Build](.github/workflows/container-image-build.yml) | Multi-architecture buildx build and push to a container registry (ghcr.io, ACR, Docker Hub). Tags with semver, major, minor and latest. Optionally clones extra repositories into the Docker build context. | `registry` (required), `tag` (required), `tag-major` (required), `tag-minor` (required), `platform`, `dockerfile`, `push-image`, `extra-repos` |
 | [Helm Chart Package](.github/workflows/helm-chart-package.yml) | Lint, package and push a Helm chart to an OCI registry. Helm version is sourced from `.devcontainer/devcontainer.json`. | `tag` (required), `image-registry` (required), `chart-registry` (required), `chart-repository` (required), `chart-path` |
 | [GitOps Manifest Update](.github/workflows/gha-gitops-manifest-update.yml) | Update image tags in a GitOps repository via [f2calv/gha-gitops-manifest-update](https://github.com/f2calv/gha-gitops-manifest-update). | `tag` (required), `image-registry` (required), `image-repository` (required), `manifest-paths` (required), `namespace` (required) |
 
@@ -52,7 +52,7 @@ jobs:
 | --- | --- | --- |
 | [Lint](.github/workflows/lint.yml) | Run [pre-commit](https://pre-commit.com/) hooks against all files in the repository. | `pre-commit-version` |
 
-## Dependency Diagrams
+## Deployment Flow
 
 Mermaid diagrams showing the action dependency chain for each workflow. Actions and workflows owned by [f2calv](https://github.com/f2calv) are highlighted in blue.
 

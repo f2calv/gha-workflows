@@ -8,18 +8,21 @@ on:
         description: e.g. Debug or Release
         required: true
         default: Release
-      #workflow_call boolean input type is boolean
-      #workflow_dispatch boolean input type is treated like string - because it actually has 3 values true/false/'empty'
       execute-tests:
-        type: string #cannot be boolean see https://github.com/actions/runner/issues/1483
-        description: Execute unit tests. Default is 'true'
+        type: boolean
+        description: Execute unit tests?
         required: false
-        default: 'true'
+        default: true
       push-preview:
-        type: string #cannot be boolean see https://github.com/actions/runner/issues/1483
-        description: Push preview branch? Default is 'false'
+        type: boolean
+        description: Push a pre-release NuGet package from a non-default branch?
         required: true
-        default: 'false'
+        default: false
+      package-filter:
+        type: string
+        description: Comma-separated package ID prefixes to push e.g. CasCap.Common.Caching
+        required: false
+        default: ''
     secrets:
       #Note: We don't need to pass in GITHUB_TOKEN to a reusable workflow. When a reusable workflow is triggered by a caller workflow, the github context is always associated with the caller workflow. The called workflow is automatically granted access to github.token and secrets.GITHUB_TOKEN.
       #see https://docs.github.com/en/actions/using-workflows/reusing-workflows
@@ -48,6 +51,7 @@ jobs:
           configuration: ${{ inputs.configuration }}
           execute-tests: ${{ inputs.execute-tests }}
           push-preview: ${{ inputs.push-preview }}
+          package-filter: ${{ inputs.package-filter }}
           version: ${{ needs.versioning.outputs.version }}
 
   release:
