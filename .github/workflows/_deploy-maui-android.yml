@@ -1,0 +1,114 @@
+name: deploy-maui-android
+
+# Reusable workflow that builds and optionally publishes the CasCap.App.Maui Android
+# application to the Google Play Store (internal track by default).
+#
+# Required repository secrets when deploy=true:
+#   ANDROID_KEYSTORE_BASE64        – Base64-encoded .jks / .keystore file
+#   ANDROID_KEYSTORE_PASSWORD      – Password for the keystore store
+#   ANDROID_KEY_ALIAS              – Alias of the signing key inside the keystore
+#   ANDROID_KEY_PASSWORD           – Password for the signing key
+#   GOOGLE_PLAY_SERVICE_ACCOUNT_JSON – Full JSON of the Google Play service account
+
+on:
+  workflow_call:
+    inputs:
+      deploy:
+        description: >
+          Set to true to actually sign and upload to the Play Store.
+          Defaults to false so the workflow is safe to call from CI / test runs.
+        type: boolean
+        default: false
+      dotnet-version:
+        description: .NET SDK version to install (must match the app's target framework).
+        type: string
+        default: '10.0.x'
+      configuration:
+        description: Build configuration (Release or Debug).
+        type: string
+        default: Release
+      package-name:
+        description: Android application ID as registered in the Play Console.
+        type: string
+        default: net.cascap.app.maui
+      play-track:
+        description: Play Store track to upload to (internal, alpha, beta, production).
+        type: string
+        default: internal
+      app-display-version:
+        description: ApplicationDisplayVersion (Android versionName), e.g. '1.2.3'.
+        type: string
+        default: '1.0'
+      app-version-code:
+        description: ApplicationVersion (Android versionCode); must be a positive integer, e.g. the CI run number.
+        type: string
+        default: '1'
+
+env:
+  PROJECT_PATH: src/CasCap.App.Maui/CasCap.App.Maui.csproj
+  KEYSTORE_PATH: /tmp/android.keystore
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    if: github.actor != 'dependabot[bot]'
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: ${{ inputs.dotnet-version }}
+
+      - name: Install MAUI Android workload
+        run: dotnet workload install maui-android
+
+      # Decode the keystore secret into a temp file only when actually deploying.
+      # This avoids touching signing secrets during dry runs.
+      - name: Decode keystore
+        if: inputs.deploy == true
+        run: echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 --decode > ${{ env.KEYSTORE_PATH }}
+
+      # Publish the Android AAB.  When deploy=true the MSBuild signing properties
+      # are passed so the output is a signed release bundle ready for the Play Store.
+      - name: Publish Android (signed)
+        if: inputs.deploy == true
+        run: |
+          dotnet publish ${{ env.PROJECT_PATH }} \
+            -f net10.0-android \
+            -c ${{ inputs.configuration }} \
+            -p:ApplicationDisplayVersion=${{ inputs.app-display-version }} \
+            -p:ApplicationVersion=${{ inputs.app-version-code }} \
+            -p:AndroidSigningKeyStore=${{ env.KEYSTORE_PATH }} \
+            -p:AndroidSigningKeyAlias=${{ secrets.ANDROID_KEY_ALIAS }} \
+            -p:AndroidSigningKeyPass=${{ secrets.ANDROID_KEY_PASSWORD }} \
+            -p:AndroidSigningStorePass=${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+
+      # Unsigned build — validates that the project compiles cleanly without
+      # requiring any signing secrets.  Runs on every invocation (deploy=false).
+      - name: Publish Android (unsigned, build-check only)
+        if: inputs.deploy == false
+        run: |
+          dotnet publish ${{ env.PROJECT_PATH }} \
+            -f net10.0-android \
+            -c ${{ inputs.configuration }} \
+            -p:ApplicationDisplayVersion=${{ inputs.app-display-version }} \
+            -p:ApplicationVersion=${{ inputs.app-version-code }}
+
+      - name: Upload to Play Store
+        if: inputs.deploy == true
+        uses: r0adkll/upload-google-play@v1
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON }}
+          packageName: ${{ inputs.package-name }}
+          releaseFiles: src/CasCap.App.Maui/bin/${{ inputs.configuration }}/net10.0-android/**/*.aab
+          track: ${{ inputs.play-track }}
+
+      - name: Remove keystore
+        if: always() && inputs.deploy == true
+        run: rm -f ${{ env.KEYSTORE_PATH }}
