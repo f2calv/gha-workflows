@@ -170,7 +170,11 @@ jobs:
           if [[ "${{ inputs.is-library-chart }}" == "false" ]]; then
             printf "\n\nUpdate the repository in the values.yaml\n"
             yq -i '.image.repository = env(IMAGE_PREFIX)' $CHART_PATH/values.yaml
-            yq -i '.image.tag = env(TAG)' $CHART_PATH/values.yaml
+            if [[ -z "$TAG_OVERRIDE" ]]; then
+              yq -i '.image.tag = env(TAG)' $CHART_PATH/values.yaml
+            else
+              yq -i '.image.tag = env(TAG_OVERRIDE)' $CHART_PATH/values.yaml
+            fi
 
             printf "\n\nAppend git repository context to the values.yaml\n"
             yq -i '.envVars.GIT_TAG=env(TAG)' $CHART_PATH/values.yaml
