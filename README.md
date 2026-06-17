@@ -33,6 +33,7 @@ jobs:
 | [Container Image Build](.github/workflows/container-image-build.yml) | Multi-architecture buildx build and push to a container registry (ghcr.io, ACR, Docker Hub). Tags with semver, major, minor and latest. Optionally clones extra repositories into the Docker build context. | `registry` (required), `tag` (required), `tag-major` (required), `tag-minor` (required), `platform`, `dockerfile`, `push-image`, `extra-repos` |
 | [Helm Chart Package](.github/workflows/helm-chart-package.yml) | Lint, package and push a Helm chart to an OCI registry. Helm version is sourced from `.devcontainer/devcontainer.json`. | `tag` (required), `image-registry` (required), `chart-registry` (required), `chart-repository` (required), `chart-path` |
 | [GitOps Manifest Update](.github/workflows/gha-gitops-manifest-update.yml) | Update image tags in a GitOps repository via [f2calv/gha-gitops-manifest-update](https://github.com/f2calv/gha-gitops-manifest-update). | `tag` (required), `image-registry` (required), `image-repository` (required), `manifest-paths` (required), `namespace` (required) |
+| [Package Cleanup](.github/workflows/package-cleanup.yml) | Prune old container/Helm chart versions from ghcr.io via [dataaxiom/ghcr-cleanup-action](https://github.com/dataaxiom/ghcr-cleanup-action). Keeps the N most-recent tagged versions, deletes untagged orphans, and protects excluded tags. Defaults to dry-run. | `packages` (required), `keep-n-tagged`, `exclude-tags`, `older-than`, `delete-untagged`, `dry-run` |
 
 ### NuGet
 
@@ -104,6 +105,15 @@ flowchart LR
     J --> A1["actions/checkout@v6"]
     J --> A2["f2calv/gha-gitops-manifest-update@v2"]
     class A2 f2calv
+```
+
+### _package-cleanup
+
+```mermaid
+flowchart LR
+    classDef f2calv fill:#dbeafe,stroke:#2563eb,color:#1e3a5f
+    W(["_package-cleanup"]) --> J["package-cleanup"]
+    J --> A1["dataaxiom/ghcr-cleanup-action@v1"]
 ```
 
 ### _gha-release-versioning
