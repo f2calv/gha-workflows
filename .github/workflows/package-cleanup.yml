@@ -1,0 +1,50 @@
+name: _package-cleanup
+
+on:
+  workflow_call:
+    inputs:
+      packages:
+        type: string
+        description: Comma-separated list of ghcr.io package names to prune, e.g. my-app,my-app/charts/my-chart
+        required: true
+      keep-n-tagged:
+        type: number
+        description: Number of most-recent tagged versions to retain per package.
+        default: 10
+      exclude-tags:
+        type: string
+        description: Tags to always preserve (wildcard syntax). Takes priority over every other rule.
+        default: latest
+      older-than:
+        type: string
+        description: Only delete images older than this interval, e.g. '30 days', '6 months'. Empty disables the age filter.
+        default: ''
+      delete-untagged:
+        type: boolean
+        description: Delete all untagged (orphaned) images.
+        default: true
+      dry-run:
+        type: boolean
+        description: Log everything that would be deleted without making changes.
+        default: true
+
+permissions: {}
+
+jobs:
+  package-cleanup:
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+    concurrency:
+      group: package-cleanup-${{ github.repository }}
+    steps:
+      - uses: dataaxiom/ghcr-cleanup-action@v1
+        with:
+          owner: ${{ github.repository_owner }}
+          packages: ${{ inputs.packages }}
+          keep-n-tagged: ${{ inputs.keep-n-tagged }}
+          exclude-tags: ${{ inputs.exclude-tags }}
+          older-than: ${{ inputs.older-than }}
+          delete-untagged: ${{ inputs.delete-untagged }}
+          dry-run: ${{ inputs.dry-run }}
+          token: ${{ secrets.GITHUB_TOKEN }}

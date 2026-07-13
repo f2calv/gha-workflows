@@ -26,6 +26,12 @@ jobs:
 | [App Build .NET](.github/workflows/app-build-dotnet.yml) | Restore, workload restore, build a .NET solution/project. Installs .NET 8/9/10 SDKs. Optionally clones extra repositories into the build context. | `version` (required), `solution-name`, `configuration`, `dotnet-restore-args`, `dotnet-build-args`, `extra-repos` |
 | [App Build Rust](.github/workflows/app-build-rust.yml) | Format check, clippy lint, fetch and build a Rust project. | `version` (required) |
 
+### Database
+
+| Workflow | Description | Key Inputs |
+| --- | --- | --- |
+| [EF Migrations Drift](.github/workflows/ef-migrations-drift.yml) | Fail when the EF Core model has schema changes not captured by a migration (runs `dotnet ef migrations has-pending-model-changes`; no live database required). Installs .NET 8/9/10 SDKs and restores tools. The caller repo must pin `dotnet-ef` in `.config/dotnet-tools.json` and provide an `IDesignTimeDbContextFactory` configured with the migrations provider. | `project` (required), `startup-project`, `context`, `configuration`, `extra-repos` |
+
 ### Containers & Helm
 
 | Workflow | Description | Key Inputs |
@@ -33,6 +39,7 @@ jobs:
 | [Container Image Build](.github/workflows/container-image-build.yml) | Multi-architecture buildx build and push to a container registry (ghcr.io, ACR, Docker Hub). Tags with semver, major, minor and latest. Optionally clones extra repositories into the Docker build context. | `registry` (required), `tag` (required), `tag-major` (required), `tag-minor` (required), `platform`, `dockerfile`, `push-image`, `extra-repos` |
 | [Helm Chart Package](.github/workflows/helm-chart-package.yml) | Lint, package and push a Helm chart to an OCI registry. Helm version is sourced from `.devcontainer/devcontainer.json`. | `tag` (required), `image-registry` (required), `chart-registry` (required), `chart-repository` (required), `chart-path` |
 | [GitOps Manifest Update](.github/workflows/gha-gitops-manifest-update.yml) | Update image tags in a GitOps repository via [f2calv/gha-gitops-manifest-update](https://github.com/f2calv/gha-gitops-manifest-update). | `tag` (required), `image-registry` (required), `image-repository` (required), `manifest-paths` (required), `namespace` (required) |
+| [Package Cleanup](.github/workflows/package-cleanup.yml) | Prune old container/Helm chart versions from ghcr.io via [dataaxiom/ghcr-cleanup-action](https://github.com/dataaxiom/ghcr-cleanup-action). Keeps the N most-recent tagged versions, deletes untagged orphans, and protects excluded tags. Defaults to dry-run. | `packages` (required), `keep-n-tagged`, `exclude-tags`, `older-than`, `delete-untagged`, `dry-run` |
 
 ### NuGet
 
@@ -75,6 +82,16 @@ flowchart LR
     J --> A1["actions/checkout@v6"]
 ```
 
+### _ef-migrations-drift
+
+```mermaid
+flowchart LR
+    classDef f2calv fill:#dbeafe,stroke:#2563eb,color:#1e3a5f
+    W(["_ef-migrations-drift"]) --> J["ef-migrations-drift"]
+    J --> A1["actions/checkout@v7"]
+    J --> A2["actions/setup-dotnet@v5"]
+```
+
 ### _container-image-build
 
 ```mermaid
@@ -104,6 +121,15 @@ flowchart LR
     J --> A1["actions/checkout@v6"]
     J --> A2["f2calv/gha-gitops-manifest-update@v2"]
     class A2 f2calv
+```
+
+### _package-cleanup
+
+```mermaid
+flowchart LR
+    classDef f2calv fill:#dbeafe,stroke:#2563eb,color:#1e3a5f
+    W(["_package-cleanup"]) --> J["package-cleanup"]
+    J --> A1["dataaxiom/ghcr-cleanup-action@v1"]
 ```
 
 ### _gha-release-versioning
