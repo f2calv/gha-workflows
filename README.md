@@ -26,6 +26,12 @@ jobs:
 | [App Build .NET](.github/workflows/app-build-dotnet.yml) | Restore, workload restore, build a .NET solution/project. Installs .NET 8/9/10 SDKs. Optionally clones extra repositories into the build context. | `version` (required), `solution-name`, `configuration`, `dotnet-restore-args`, `dotnet-build-args`, `extra-repos` |
 | [App Build Rust](.github/workflows/app-build-rust.yml) | Format check, clippy lint, fetch and build a Rust project. | `version` (required) |
 
+### Database
+
+| Workflow | Description | Key Inputs |
+| --- | --- | --- |
+| [EF Migrations Drift](.github/workflows/ef-migrations-drift.yml) | Fail when the EF Core model has schema changes not captured by a migration (runs `dotnet ef migrations has-pending-model-changes`; no live database required). Installs .NET 8/9/10 SDKs and restores tools. The caller repo must pin `dotnet-ef` in `.config/dotnet-tools.json` and provide an `IDesignTimeDbContextFactory` configured with the migrations provider. | `project` (required), `startup-project`, `context`, `configuration`, `extra-repos` |
+
 ### Containers & Helm
 
 | Workflow | Description | Key Inputs |
@@ -74,6 +80,16 @@ flowchart LR
     classDef f2calv fill:#dbeafe,stroke:#2563eb,color:#1e3a5f
     W(["_app-build-rust"]) --> J["app-build-rust"]
     J --> A1["actions/checkout@v6"]
+```
+
+### _ef-migrations-drift
+
+```mermaid
+flowchart LR
+    classDef f2calv fill:#dbeafe,stroke:#2563eb,color:#1e3a5f
+    W(["_ef-migrations-drift"]) --> J["ef-migrations-drift"]
+    J --> A1["actions/checkout@v7"]
+    J --> A2["actions/setup-dotnet@v5"]
 ```
 
 ### _container-image-build

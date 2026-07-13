@@ -1,0 +1,69 @@
+name: _ef-migrations-drift
+
+on:
+  workflow_call:
+    inputs:
+      project:
+        type: string
+        description: Migrations/target project or solution (e.g. src/CasCap.Data/CasCap.Data.csproj)
+        required: true
+      startup-project:
+        type: string
+        description: Design-time startup project (defaults to `project` when empty)
+        default: ''
+      context:
+        type: string
+        description: DbContext name (optional; omit when the project has a single context)
+        default: ''
+      configuration:
+        type: string
+        description: e.g. Debug or Release
+        default: Release
+      extra-repos:
+        type: string
+        description: >
+          JSON array of extra repositories to clone (Debug builds with sibling ProjectReferences).
+          Each element: {"repo":"owner/name","ref":"main","path":"deps/name"}
+        default: '[]'
+
+jobs:
+  ef-migrations-drift:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 1
+
+      - name: clone extra repositories
+        if: inputs.extra-repos != '[]'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          EXTRA_REPOS: ${{ inputs.extra-repos }}
+        run: |
+          echo "$EXTRA_REPOS" | jq -c '.[]' | while read -r item; do
+            REPO=$(echo "$item" | jq -r '.repo')
+            REF=$(echo "$item" | jq -r '.ref // "HEAD"')
+            DEST=$(echo "$item" | jq -r '.path // "deps"')
+            git clone --depth 1 --branch "$REF" \
+              "https://x-access-token:${GH_TOKEN}@github.com/${REPO}.git" "$DEST"
+          done
+
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: |
+            8.0.x
+            9.0.x
+            10.0.x
+
+      - name: dotnet tool restore
+        run: dotnet tool restore
+
+      - name: dotnet ef migrations has-pending-model-changes
+        run: >
+          dotnet ef migrations has-pending-model-changes
+          --project ${{ inputs.project }}
+          --startup-project ${{ inputs.startup-project != '' && inputs.startup-project || inputs.project }}
+          ${{ inputs.context != '' && format('--context {0}', inputs.context) || '' }}
+          --configuration ${{ inputs.configuration }}
