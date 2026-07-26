@@ -24,6 +24,7 @@ jobs:
 | Workflow | Description | Key Inputs |
 | --- | --- | --- |
 | [App Build .NET](.github/workflows/app-build-dotnet.yml) | Restore, workload restore, build a .NET solution/project. Installs .NET 8/9/10 SDKs. Optionally clones extra repositories into the build context. | `version` (required), `solution-name`, `configuration`, `dotnet-restore-args`, `dotnet-build-args`, `extra-repos` |
+| [App Build Go](.github/workflows/app-build-go.yml) | `gofmt` check, `go mod verify`, `go vet`, staticcheck, build and test a Go module. Toolchain version is sourced from `go.mod`. | `version` (required), `go-version-file`, `package`, `ldflags` |
 | [App Build Rust](.github/workflows/app-build-rust.yml) | Format check, clippy lint, fetch and build a Rust project. | `version` (required) |
 
 ### Database
@@ -71,6 +72,17 @@ flowchart LR
     W(["_app-build-dotnet"]) --> J["app-build-dotnet"]
     J --> A1["actions/checkout@v6"]
     J --> A2["actions/setup-dotnet@v5"]
+```
+
+### _app-build-go
+
+```mermaid
+flowchart LR
+    classDef f2calv fill:#dbeafe,stroke:#2563eb,color:#1e3a5f
+    W(["_app-build-go"]) --> J["app-build-go"]
+    J --> A1["actions/checkout@v7"]
+    J --> A2["actions/setup-go@v6"]
+    J --> A3["dominikh/staticcheck-action@v1"]
 ```
 
 ### _app-build-rust

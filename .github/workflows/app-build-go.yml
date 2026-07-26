@@ -1,0 +1,62 @@
+name: _app-build-go
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        type: string
+        description: e.g. 1.2.301-feature-my-feature.12+56
+        required: true
+      go-version-file:
+        type: string
+        description: Path to the go.mod that pins the Go toolchain version.
+        default: go.mod
+      package:
+        type: string
+        description: Package pattern to build/vet/test, e.g. ./... or ./src/my-app
+        default: ./...
+      ldflags:
+        type: string
+        description: Optional additional linker flags appended to the default -s -w.
+        default: ''
+
+jobs:
+  app-build-go:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: ${{ inputs.go-version-file }}
+
+      - name: go version
+        run: go version
+
+      - name: gofmt -l
+        run: |
+          UNFORMATTED=$(gofmt -l .)
+          if [[ -n "$UNFORMATTED" ]]; then
+            echo "::error::the following files are not gofmt-formatted:"
+            echo "$UNFORMATTED"
+            exit 1
+          fi
+
+      - name: go mod verify
+        run: go mod verify
+
+      - name: go vet
+        run: go vet ${{ inputs.package }}
+
+      - uses: dominikh/staticcheck-action@v1
+        with:
+          version: latest
+          install-go: false
+
+      - name: go build
+        run: go build -trimpath -ldflags "-s -w -X main.version=${{ inputs.version }} ${{ inputs.ldflags }}" ${{ inputs.package }}
+
+      - name: go test
+        run: go test -race ${{ inputs.package }}
