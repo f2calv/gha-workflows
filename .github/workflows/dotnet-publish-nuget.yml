@@ -1,3 +1,7 @@
+#DEPRECATED: NuGet.org Trusted Publishing validates the OIDC 'job_workflow_ref' claim, which for a
+#cross-repository reusable workflow points at f2calv/gha-workflows instead of the calling repository,
+#so no Trusted Publisher policy can ever match. Call f2calv/gha-dotnet-nuget@v2 directly from the
+#consuming repository's own workflow instead. See https://github.com/NuGet/login/issues/24
 name: _dotnet-publish-nuget
 
 on:
