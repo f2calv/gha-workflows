@@ -42,12 +42,6 @@ jobs:
 | [GitOps Manifest Update](.github/workflows/gha-gitops-manifest-update.yml) | Update image tags in a GitOps repository via [f2calv/gha-gitops-manifest-update](https://github.com/f2calv/gha-gitops-manifest-update). | `tag` (required), `image-registry` (required), `image-repository` (required), `manifest-paths` (required), `namespace` (required) |
 | [Package Cleanup](.github/workflows/package-cleanup.yml) | Prune old container/Helm chart versions from ghcr.io via [dataaxiom/ghcr-cleanup-action](https://github.com/dataaxiom/ghcr-cleanup-action). Keeps the N most-recent tagged versions, deletes untagged orphans, and protects excluded tags. Defaults to dry-run. | `packages` (required), `keep-n-tagged`, `exclude-tags`, `older-than`, `delete-untagged`, `dry-run` |
 
-### NuGet
-
-| Workflow | Description | Key Inputs |
-| --- | --- | --- |
-| [.NET Publish NuGet](.github/workflows/dotnet-publish-nuget.yml) | Build, test, pack and push NuGet packages via [f2calv/gha-dotnet-nuget](https://github.com/f2calv/gha-dotnet-nuget). | `configuration`, `execute-tests`, `push-preview` |
-
 ### Release & Versioning
 
 | Workflow | Description | Key Inputs |
@@ -153,25 +147,6 @@ flowchart LR
     J --> A1["actions/checkout@v6"]
     J --> A2["f2calv/gha-release-versioning@v1"]
     class A2 f2calv
-```
-
-### _dotnet-publish-nuget
-
-```mermaid
-flowchart LR
-    classDef f2calv fill:#dbeafe,stroke:#2563eb,color:#1e3a5f
-    W(["_dotnet-publish-nuget"]) --> J1["versioning"]
-    W --> J2["build"]
-    W --> J3["release"]
-    J1 -- uses --> SW1[["_gha-release-versioning"]]
-    J2 -- needs --> J1
-    J2 --> A1["f2calv/gha-dotnet-nuget@v2"]
-    J3 -- needs --> J1
-    J3 -- needs --> J2
-    J3 -- uses --> SW2[["_gha-release-versioning"]]
-    class A1 f2calv
-    class SW1 f2calv
-    class SW2 f2calv
 ```
 
 ### _lint
