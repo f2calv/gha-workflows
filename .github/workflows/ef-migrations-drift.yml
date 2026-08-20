@@ -60,6 +60,9 @@ jobs:
       - name: dotnet tool restore
         run: dotnet tool restore
 
+      - name: dotnet restore
+        run: dotnet restore ${{ inputs.project }} -p:Configuration=${{ inputs.configuration }} --verbosity minimal
+
       - name: dotnet ef migrations has-pending-model-changes
         run: >
           dotnet ef migrations has-pending-model-changes
