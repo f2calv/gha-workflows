@@ -38,6 +38,10 @@ on:
         type: boolean
         description: Is the helm chart a library chart?
         default: false
+      has-image:
+        type: boolean
+        description: Whether the chart owns image and provenance values.
+        default: true
       push-chart:
         type: boolean
         description: By default always push the newly packaged chart.
@@ -167,7 +171,7 @@ jobs:
           fi
           cat $CHART_PATH/Chart.yaml
 
-          if [[ "${{ inputs.is-library-chart }}" == "false" ]]; then
+          if [[ "${{ inputs.is-library-chart }}" == "false" && "${{ inputs.has-image }}" == "true" ]]; then
             printf "\n\nUpdate the repository in the values.yaml\n"
             yq -i '.image.repository = env(IMAGE_PREFIX)' $CHART_PATH/values.yaml
             if [[ -z "$TAG_OVERRIDE" ]]; then
@@ -229,25 +233,32 @@ jobs:
       - name: chart-testing (lint)
         if: inputs.chart-testing-cli-command == 'lint'
         run: |
-          ARGS="--set image.tag=$TAG"
+          EXTRA_ARGS=()
+          if [[ "${{ inputs.has-image }}" == "true" ]]; then
+            EXTRA_ARGS=(--helm-lint-extra-args "--set image.tag=$TAG")
+          fi
           docker run --rm --network host --workdir=/data --volume ~/.kube/config:/root/.kube/config:ro \
             --volume $(pwd):/data quay.io/helmpack/chart-testing:${{ inputs.chart-testing-cli-version }} \
             ct ${{ inputs.chart-testing-cli-command }} --charts $CHART_PATH \
-            --helm-lint-extra-args "$ARGS" --validate-maintainers=false
+            "${EXTRA_ARGS[@]}" --validate-maintainers=false
 
       #https://github.com/helm/chart-testing/blob/main/doc/ct_install.md
       - name: chart-testing (install)
         if: inputs.chart-testing-cli-command == 'install' && inputs.is-library-chart == false
         run: |
-          #Note: we can only fully install the chart if we have pushed the image as well, assumption inputs.push-chart == inputs.push-image
-          ARGS="--set image.tag=$TAG"
-          if [[ "${{ inputs.push-chart }}" == "false" ]]; then
-            ARGS="--set image.repository=nginx --set image.tag=latest"
+          EXTRA_ARGS=()
+          if [[ "${{ inputs.has-image }}" == "true" ]]; then
+            #Note: we can only fully install the chart if we have pushed the image as well, assumption inputs.push-chart == inputs.push-image
+            ARGS="--set image.tag=$TAG"
+            if [[ "${{ inputs.push-chart }}" == "false" ]]; then
+              ARGS="--set image.repository=nginx --set image.tag=latest"
+            fi
+            EXTRA_ARGS=(--helm-extra-set-args "$ARGS")
           fi
           docker run --rm --network host --workdir=/data --volume ~/.kube/config:/root/.kube/config:ro \
             --volume $(pwd):/data quay.io/helmpack/chart-testing:${{ inputs.chart-testing-cli-version }} \
             ct ${{ inputs.chart-testing-cli-command }} --charts $CHART_PATH \
-            --helm-extra-set-args "$ARGS" --build-id ${{ github.run_id }}
+            "${EXTRA_ARGS[@]}" --build-id ${{ github.run_id }}
 
       - name: helm push
         if: inputs.push-chart == true
