@@ -176,8 +176,8 @@ jobs:
           echo "REPOSITORY=$REPOSITORY"
           echo "TAG=$TAG"
           echo "TAGS=${TAGS[*]}"
-          echo "args=${{ inputs.args }}"
           echo "ARGS=${ARGS[*]}"
+          echo "PUSH_ARGS=${PUSH_ARGS[*]}"
           echo "DockerFile=${{ inputs.dockerfile }}"
 
           if [[ -n "$SMOKE_TEST" ]]; then
