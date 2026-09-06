@@ -163,26 +163,31 @@ jobs:
           TAGS+=(-t "$REGISTRY/$REPOSITORY:$ADDITIONAL_TAG")
 
           ARGS=()
-          if [[ "${{ inputs.push-image }}" == "true" ]]; then
-            ARGS+=(--push)
-          fi
           if [[ ! -z "${{ inputs.args }}" ]]; then
             ARGS+=(${{ inputs.args }})
+          fi
+
+          PUSH_ARGS=()
+          if [[ "${{ inputs.push-image }}" == "true" ]]; then
+            PUSH_ARGS+=(--push)
           fi
 
           echo "REGISTRY=$REGISTRY"
           echo "REPOSITORY=$REPOSITORY"
           echo "TAG=$TAG"
-          echo "TAGS=${TAGS[@]}"
+          echo "TAGS=${TAGS[*]}"
           echo "args=${{ inputs.args }}"
-          echo "ARGS=${ARGS[@]}"
+          echo "ARGS=${ARGS[*]}"
           echo "DockerFile=${{ inputs.dockerfile }}"
 
           if [[ -n "$SMOKE_TEST" ]]; then
             IMAGE="$IMAGE_NAME:smoke-test"
 
             echo "::group::docker buildx build --load --platform ${{ inputs.smoke-test-platform }}"
-            build --load --platform ${{ inputs.smoke-test-platform }} -t "$IMAGE"
+            #the caller's args must be passed here too, or the smoke test runs against a different
+            #image than the one published, and the build below misses the cache on every layer after
+            #the first differing build-arg
+            build --load --platform ${{ inputs.smoke-test-platform }} -t "$IMAGE" "${ARGS[@]}"
             echo "::endgroup::"
 
             echo "::group::smoke test"
@@ -191,7 +196,7 @@ jobs:
           fi
 
           #reuses the builder above, so the smoke test platform is already cached rather than rebuilt
-          build "${TAGS[@]}" --platform ${{ inputs.platform }} "${ARGS[@]}"
+          build "${TAGS[@]}" --platform ${{ inputs.platform }} "${ARGS[@]}" "${PUSH_ARGS[@]}"
         env:
           BUILDX_NO_DEFAULT_ATTESTATIONS: 1 #Note: fixes publishing container architecture 'unknown/unknown'
           SMOKE_TEST: ${{ inputs.smoke-test }}
