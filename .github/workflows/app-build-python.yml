@@ -7,10 +7,6 @@ on:
         type: string
         description: e.g. 1.2.301-feature-my-feature.12+56
         required: true
-      python-version-file:
-        type: string
-        description: Path to the file that pins the Python version.
-        default: .python-version
 
 permissions: {}
 
@@ -24,10 +20,9 @@ jobs:
         with:
           fetch-depth: 0
 
-      - uses: astral-sh/setup-uv@v7
+      - uses: astral-sh/setup-uv@v10
         with:
           enable-cache: true
-          python-version-file: ${{ inputs.python-version-file }}
 
       - name: uv version
         run: uv version
