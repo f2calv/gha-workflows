@@ -20,7 +20,8 @@ jobs:
         with:
           fetch-depth: 0
 
-      - uses: astral-sh/setup-uv@v10
+      # setup-uv does not publish a moving major-version tag.
+      - uses: astral-sh/setup-uv@v10.0.1
         with:
           enable-cache: true
 
