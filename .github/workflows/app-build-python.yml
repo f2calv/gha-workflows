@@ -1,0 +1,50 @@
+name: _app-build-python
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        type: string
+        description: e.g. 1.2.301-feature-my-feature.12+56
+        required: true
+
+permissions: {}
+
+jobs:
+  app-build-python:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      # setup-uv does not publish a moving major-version tag.
+      - uses: astral-sh/setup-uv@v10.0.1
+        with:
+          enable-cache: true
+
+      - name: uv version
+        run: uv version
+
+      - name: uv lock --check
+        run: uv lock --check
+
+      - name: uv sync --locked --all-groups
+        run: uv sync --locked --all-groups
+
+      - name: ruff format --check
+        run: uv run --no-sync ruff format --check .
+
+      - name: ruff check
+        run: uv run --no-sync ruff check .
+
+      - name: mypy
+        run: uv run --no-sync mypy
+
+      - name: pytest
+        run: uv run --no-sync pytest
+
+      - name: uv build
+        run: uv build
