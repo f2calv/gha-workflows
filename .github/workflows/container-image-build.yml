@@ -48,6 +48,14 @@ on:
         type: boolean
         description: By default always push the newly built container image.
         default: true
+      #Publishes SLSA provenance and an SBOM alongside the image. Opt-in, because attestations are
+      #stored as extra manifests which ghcr.io and Docker Hub render as unknown/unknown platform
+      #entries. Only applied to the pushed build; the docker exporter used by the smoke test cannot
+      #carry attestations.
+      attestations:
+        type: boolean
+        description: Attach SLSA provenance and SBOM attestations to the pushed image.
+        default: false
       github-private-packages-auth:
         type: boolean
         description: Set to true when you want to access private nuget packages in a private github packages feed.
@@ -170,6 +178,9 @@ jobs:
           PUSH_ARGS=()
           if [[ "${{ inputs.push-image }}" == "true" ]]; then
             PUSH_ARGS+=(--push)
+            if [[ "${{ inputs.attestations }}" == "true" ]]; then
+              PUSH_ARGS+=(--provenance=mode=max --sbom=true)
+            fi
           fi
 
           echo "REGISTRY=$REGISTRY"
