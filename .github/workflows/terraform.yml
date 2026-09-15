@@ -1,0 +1,221 @@
+name: _terraform
+#Note: wraps the core terraform commands - fmt, init, validate, plan, apply and destroy - behind a single reusable job.
+
+on:
+  workflow_call:
+    inputs:
+      command:
+        type: string
+        description: e.g. validate, plan, apply, plan+apply or destroy
+        default: plan
+      working-directory:
+        type: string
+        description: Directory holding the terraform root module, e.g. src/terraform/modules/0core
+        required: true
+      terraform-version:
+        type: string
+        description: e.g. 1.13.3
+        default: 1.13.3
+      environment:
+        type: string
+        description: GitHub environment used to scope secrets and approvals, e.g. dev
+        default: ''
+      #Repeat one setting per line, e.g. a storage account plus the state key. Combines with backend-config-file.
+      backend-config:
+        type: string
+        description: Newline-separated partial backend settings, e.g. key=0core/terraform.tfstate
+        default: ''
+      backend-config-file:
+        type: string
+        description: Backend settings file, relative to working-directory, e.g. ../../config/dev.tfbackend
+        default: ''
+      var-file:
+        type: string
+        description: Variable file, relative to working-directory, e.g. ../../config/dev.tfvars
+        default: ''
+      #Only needed when the configuration shells out to the az CLI, e.g. from a local-exec provisioner.
+      azure-login:
+        type: boolean
+        description: Run azure/login before terraform.
+        default: true
+      use-oidc:
+        type: boolean
+        description: Authenticate with OIDC federated credentials rather than a client secret.
+        default: true
+      artifact-name:
+        type: string
+        description: Plan artifact name, used to pass a plan from a plan run to a later apply run.
+        default: tfplan
+      log-level:
+        type: string
+        description: e.g. OFF, ERROR, WARN, INFO, DEBUG or TRACE
+        default: ERROR
+      #Recovers a state file left locked by an interrupted run; take the id from the error message.
+      lock-id:
+        type: string
+        description: Lock id to force-unlock before planning.
+        default: ''
+      #Detaches a resource from state without destroying it, e.g. before an import block re-adopts it.
+      state-rm:
+        type: string
+        description: Resource address to remove from state, e.g. module.k8s.azurerm_resource_group.this
+        default: ''
+      expected-release-tag:
+        type: string
+        description: Expected immutable module tag in README.md, e.g. v1.2.3
+        default: ''
+      readme-path:
+        type: string
+        description: README path relative to the repository root
+        default: README.md
+    secrets:
+      ARM_TENANT_ID:
+        required: false
+      ARM_SUBSCRIPTION_ID:
+        required: false
+      ARM_CLIENT_ID:
+        required: false
+      #Required only when use-oidc is false.
+      ARM_CLIENT_SECRET:
+        required: false
+
+permissions: {}
+
+jobs:
+  terraform:
+    name: terraform ${{ inputs.command }}
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    permissions:
+      contents: read
+      id-token: write
+    defaults:
+      run:
+        working-directory: ${{ inputs.working-directory }}
+    env:
+      TF_IN_AUTOMATION: 'true'
+      TF_LOG: ${{ inputs.log-level }}
+      TFPLAN_PATH: ${{ github.workspace }}/${{ inputs.artifact-name }}.tfplan
+      ARM_TENANT_ID: ${{ secrets.ARM_TENANT_ID }}
+      ARM_SUBSCRIPTION_ID: ${{ secrets.ARM_SUBSCRIPTION_ID }}
+      ARM_CLIENT_ID: ${{ secrets.ARM_CLIENT_ID }}
+      ARM_CLIENT_SECRET: ${{ secrets.ARM_CLIENT_SECRET }}
+      ARM_USE_OIDC: ${{ inputs.use-oidc }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 1
+
+      - name: azure/login (oidc)
+        if: inputs.command != 'validate' && inputs.azure-login && inputs.use-oidc
+        uses: azure/login@v3
+        with:
+          client-id: ${{ secrets.ARM_CLIENT_ID }}
+          tenant-id: ${{ secrets.ARM_TENANT_ID }}
+          subscription-id: ${{ secrets.ARM_SUBSCRIPTION_ID }}
+
+      - name: azure/login (client secret)
+        if: inputs.command != 'validate' && inputs.azure-login && !inputs.use-oidc
+        uses: azure/login@v3
+        with:
+          creds: '{"clientId":"${{ secrets.ARM_CLIENT_ID }}","clientSecret":"${{ secrets.ARM_CLIENT_SECRET }}","subscriptionId":"${{ secrets.ARM_SUBSCRIPTION_ID }}","tenantId":"${{ secrets.ARM_TENANT_ID }}"}'
+
+      - uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_version: ${{ inputs.terraform-version }}
+          terraform_wrapper: false
+
+      - name: terraform version
+        run: terraform version
+
+      - name: terraform fmt -check -recursive
+        if: inputs.command != 'destroy'
+        run: terraform fmt -check -recursive
+
+      - name: terraform init
+        env:
+          BACKEND_CONFIG: ${{ inputs.backend-config }}
+          BACKEND_CONFIG_FILE: ${{ inputs.backend-config-file }}
+        run: |
+          ARGS=(-input=false)
+          if [ "${{ inputs.command }}" = "validate" ]; then
+            ARGS+=("-backend=false")
+          fi
+          if [ -n "$BACKEND_CONFIG_FILE" ]; then
+            ARGS+=("-backend-config=$BACKEND_CONFIG_FILE")
+          fi
+          while IFS= read -r SETTING; do
+            if [ -n "$SETTING" ]; then
+              ARGS+=("-backend-config=$SETTING")
+            fi
+          done <<< "$BACKEND_CONFIG"
+          terraform init "${ARGS[@]}"
+
+      - name: terraform validate
+        if: inputs.command == 'validate' || inputs.command == 'plan' || inputs.command == 'plan+apply'
+        run: terraform validate
+
+      - name: README release tag
+        if: inputs.command == 'validate' && inputs.expected-release-tag != ''
+        working-directory: ${{ github.workspace }}
+        env:
+          EXPECTED_RELEASE_TAG: ${{ inputs.expected-release-tag }}
+          README_PATH: ${{ inputs.readme-path }}
+        run: grep --fixed-strings --quiet "?ref=$EXPECTED_RELEASE_TAG" "$README_PATH"
+
+      - name: terraform force-unlock
+        if: inputs.command != 'validate' && inputs.lock-id != ''
+        run: terraform force-unlock -force ${{ inputs.lock-id }}
+
+      - name: terraform state list
+        if: inputs.command != 'validate'
+        run: terraform state list
+
+      - name: terraform state rm
+        if: inputs.command != 'validate' && inputs.state-rm != ''
+        run: terraform state rm '${{ inputs.state-rm }}'
+
+      - name: terraform plan
+        if: inputs.command == 'plan' || inputs.command == 'plan+apply'
+        env:
+          VAR_FILE: ${{ inputs.var-file }}
+        run: |
+          ARGS=(-input=false -out "$TFPLAN_PATH")
+          if [ -n "$VAR_FILE" ]; then
+            ARGS+=(-var-file "$VAR_FILE")
+          fi
+          terraform plan "${ARGS[@]}"
+          terraform show "$TFPLAN_PATH" > "$TFPLAN_PATH.txt"
+
+      - uses: actions/upload-artifact@v7
+        if: inputs.command == 'plan'
+        with:
+          name: ${{ inputs.artifact-name }}
+          path: |
+            ${{ env.TFPLAN_PATH }}
+            ${{ env.TFPLAN_PATH }}.txt
+
+      - uses: actions/download-artifact@v8
+        if: inputs.command == 'apply'
+        with:
+          name: ${{ inputs.artifact-name }}
+          path: ${{ github.workspace }}
+
+      - name: terraform show
+        if: inputs.command == 'apply'
+        run: terraform show "$TFPLAN_PATH"
+
+      - name: terraform apply
+        if: inputs.command == 'apply' || inputs.command == 'plan+apply'
+        run: terraform apply -input=false "$TFPLAN_PATH"
+
+      - name: terraform destroy
+        if: inputs.command == 'destroy'
+        env:
+          VAR_FILE: ${{ inputs.var-file }}
+        run: |
+          ARGS=(-input=false -auto-approve)
+          if [ -n "$VAR_FILE" ]; then
+            ARGS+=(-var-file "$VAR_FILE")
+          fi
+          terraform destroy "${ARGS[@]}"
