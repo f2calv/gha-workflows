@@ -37,7 +37,7 @@ jobs:
 
 | Workflow | Description | Key Inputs |
 | --- | --- | --- |
-| [Terraform](.github/workflows/terraform.yml) | Run the core Terraform lifecycle against a single root module — `fmt -check`, `init` (partial backend config), `validate`, `plan`, `apply` and `destroy`. Authenticates to Azure with OIDC federated credentials by default, falling back to a client secret. A `plan` run uploads the plan as an artifact so a later `apply` run can consume exactly that plan. | `working-directory` (required), `command`, `terraform-version`, `backend-config`, `backend-config-file`, `var-file`, `use-oidc`, `azure-login` |
+| [Terraform](.github/workflows/terraform.yml) | Run Terraform formatting and validation without cloud credentials, or run the stateful `plan`, `apply`, and `destroy` lifecycle with Azure authentication. Validation uses backend-free initialization and can verify an expected immutable module tag in the README. A `plan` run uploads the plan as an artifact so a later `apply` run can consume exactly that plan. | `working-directory` (required), `command`, `terraform-version`, `backend-config`, `backend-config-file`, `var-file`, `use-oidc`, `azure-login`, `expected-release-tag`, `readme-path` |
 
 ### Containers & Helm
 

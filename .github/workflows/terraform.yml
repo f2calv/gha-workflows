@@ -6,7 +6,7 @@ on:
     inputs:
       command:
         type: string
-        description: e.g. plan, apply, plan+apply or destroy
+        description: e.g. validate, plan, apply, plan+apply or destroy
         default: plan
       working-directory:
         type: string
@@ -60,16 +60,26 @@ on:
         type: string
         description: Resource address to remove from state, e.g. module.k8s.azurerm_resource_group.this
         default: ''
+      expected-release-tag:
+        type: string
+        description: Expected immutable module tag in README.md, e.g. v1.2.3
+        default: ''
+      readme-path:
+        type: string
+        description: README path relative to the repository root
+        default: README.md
     secrets:
       ARM_TENANT_ID:
-        required: true
+        required: false
       ARM_SUBSCRIPTION_ID:
-        required: true
+        required: false
       ARM_CLIENT_ID:
-        required: true
+        required: false
       #Required only when use-oidc is false.
       ARM_CLIENT_SECRET:
         required: false
+
+permissions: {}
 
 jobs:
   terraform:
@@ -97,7 +107,7 @@ jobs:
           fetch-depth: 1
 
       - name: azure/login (oidc)
-        if: inputs.azure-login && inputs.use-oidc
+        if: inputs.command != 'validate' && inputs.azure-login && inputs.use-oidc
         uses: azure/login@v3
         with:
           client-id: ${{ secrets.ARM_CLIENT_ID }}
@@ -105,7 +115,7 @@ jobs:
           subscription-id: ${{ secrets.ARM_SUBSCRIPTION_ID }}
 
       - name: azure/login (client secret)
-        if: inputs.azure-login && !inputs.use-oidc
+        if: inputs.command != 'validate' && inputs.azure-login && !inputs.use-oidc
         uses: azure/login@v3
         with:
           creds: '{"clientId":"${{ secrets.ARM_CLIENT_ID }}","clientSecret":"${{ secrets.ARM_CLIENT_SECRET }}","subscriptionId":"${{ secrets.ARM_SUBSCRIPTION_ID }}","tenantId":"${{ secrets.ARM_TENANT_ID }}"}'
@@ -128,6 +138,9 @@ jobs:
           BACKEND_CONFIG_FILE: ${{ inputs.backend-config-file }}
         run: |
           ARGS=(-input=false)
+          if [ "${{ inputs.command }}" = "validate" ]; then
+            ARGS+=("-backend=false")
+          fi
           if [ -n "$BACKEND_CONFIG_FILE" ]; then
             ARGS+=("-backend-config=$BACKEND_CONFIG_FILE")
           fi
@@ -139,18 +152,27 @@ jobs:
           terraform init "${ARGS[@]}"
 
       - name: terraform validate
-        if: inputs.command == 'plan' || inputs.command == 'plan+apply'
+        if: inputs.command == 'validate' || inputs.command == 'plan' || inputs.command == 'plan+apply'
         run: terraform validate
 
+      - name: README release tag
+        if: inputs.command == 'validate' && inputs.expected-release-tag != ''
+        working-directory: ${{ github.workspace }}
+        env:
+          EXPECTED_RELEASE_TAG: ${{ inputs.expected-release-tag }}
+          README_PATH: ${{ inputs.readme-path }}
+        run: grep --fixed-strings --quiet "?ref=$EXPECTED_RELEASE_TAG" "$README_PATH"
+
       - name: terraform force-unlock
-        if: inputs.lock-id != ''
+        if: inputs.command != 'validate' && inputs.lock-id != ''
         run: terraform force-unlock -force ${{ inputs.lock-id }}
 
       - name: terraform state list
+        if: inputs.command != 'validate'
         run: terraform state list
 
       - name: terraform state rm
-        if: inputs.state-rm != ''
+        if: inputs.command != 'validate' && inputs.state-rm != ''
         run: terraform state rm '${{ inputs.state-rm }}'
 
       - name: terraform plan
