@@ -19,6 +19,22 @@ Detailed conventions live in scoped instruction files under `.github/instruction
 
 The conventions below always apply, regardless of the file being edited.
 
+### Workflow Diagram Conventions
+
+Beyond the shared Mermaid guidance in `documentation.instructions.md`:
+
+- Use `flowchart` for workflow chains and composite action steps.
+- Use `graph` for action dependencies and workflow call chains.
+- Group related jobs or steps in subgraphs.
+- Define `classDef` styling to distinguish actions owned by this organisation from third-party ones.
+- Use the stadium shape `([ ])` for reusable workflows and the rectangle `[ ]` for actions and jobs.
+- Reserve `## Deployment Flow` for CI/CD pipelines and action call chains, and `## Dependency Graph` for action and workflow relationships.
+- Keep diagrams in sync with the actions and workflows they describe. When renaming an input or output, or adding or removing an action dependency, update the diagram nodes in the same change.
+
+### README Scope
+
+Where the shared documentation instructions refer to a project or a `.csproj`, read that as a **workflow or action** here — this repository has no .NET projects. The root `README.md` documents every reusable workflow, its key inputs and its action dependency chain.
+
 ## Copilot Workflow
 
 - **Test execution**: Never run tests automatically — they may be integration tests requiring extra setup. Always prompt (ideally with a visual yes/no button) before running any tests.
