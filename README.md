@@ -33,6 +33,12 @@ jobs:
 | --- | --- | --- |
 | [EF Migrations Drift](.github/workflows/ef-migrations-drift.yml) | Fail when the EF Core model has schema changes not captured by a migration (runs `dotnet ef migrations has-pending-model-changes`; no live database required). Installs .NET 8/9/10 SDKs and restores tools. The caller repo must pin `dotnet-ef` in `.config/dotnet-tools.json` and provide an `IDesignTimeDbContextFactory` configured with the migrations provider. | `project` (required), `startup-project`, `context`, `configuration`, `extra-repos` |
 
+### Infrastructure
+
+| Workflow | Description | Key Inputs |
+| --- | --- | --- |
+| [Terraform](.github/workflows/terraform.yml) | Run the core Terraform lifecycle against a single root module — `fmt -check`, `init` (partial backend config), `validate`, `plan`, `apply` and `destroy`. Authenticates to Azure with OIDC federated credentials by default, falling back to a client secret. A `plan` run uploads the plan as an artifact so a later `apply` run can consume exactly that plan. | `working-directory` (required), `command`, `terraform-version`, `backend-config`, `backend-config-file`, `var-file`, `use-oidc`, `azure-login` |
+
 ### Containers & Helm
 
 | Workflow | Description | Key Inputs |
@@ -97,6 +103,19 @@ flowchart LR
     W(["_ef-migrations-drift"]) --> J["ef-migrations-drift"]
     J --> A1["actions/checkout@v7"]
     J --> A2["actions/setup-dotnet@v5"]
+```
+
+### _terraform
+
+```mermaid
+flowchart LR
+    classDef f2calv fill:#dbeafe,stroke:#2563eb,color:#1e3a5f
+    W(["_terraform"]) --> J["terraform"]
+    J --> A1["actions/checkout@v7"]
+    J --> A2["azure/login@v3"]
+    J --> A3["hashicorp/setup-terraform@v4"]
+    J --> A4["actions/upload-artifact@v7"]
+    J --> A5["actions/download-artifact@v8"]
 ```
 
 ### _container-image-build
