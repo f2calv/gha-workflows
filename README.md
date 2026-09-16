@@ -17,6 +17,12 @@ jobs:
       solution-name: MySolution.slnx
 ```
 
+CI calculates the next semantic version before release and verifies that this
+README references the corresponding floating major tag, such as `@v1`. A major
+version change therefore cannot release until the usage examples are updated.
+Consumers use the floating major tag while immutable patch tags identify each
+GitHub release.
+
 ## Workflows
 
 ### Application Build

@@ -14,10 +14,40 @@ on:
     branches: [main]
     types: [opened, synchronize, reopened]
 
+permissions: {}
+
 jobs:
   lint:
     if: github.ref != format('refs/heads/{0}', github.event.repository.default_branch)
     uses: ./.github/workflows/lint.yml
+    permissions:
+      contents: read
+
+  versioning:
+    uses: ./.github/workflows/gha-release-versioning.yml
+    with:
+      tag-and-release: false
+    permissions:
+      contents: read
+
+  validate:
+    needs: versioning
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: README floating major tag
+        env:
+          EXPECTED_WORKFLOW_REF: '@v${{ needs.versioning.outputs.major }}'
+        run: grep --extended-regexp --quiet "f2calv/gha-workflows/\.github/workflows/.+${EXPECTED_WORKFLOW_REF}" README.md
 
   release:
+    if: github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+    needs: [versioning, validate]
     uses: ./.github/workflows/gha-release-versioning.yml
+    with:
+      semVer: ${{ needs.versioning.outputs.version }}
+    permissions:
+      contents: write
