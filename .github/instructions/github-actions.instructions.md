@@ -75,8 +75,12 @@ applyTo: '.github/workflows/**,.github/actions/**,**/action.yml,**/action.yaml'
 - Pass tokens via `stdin` for registry logins (e.g. `echo "$TOKEN" | docker login --password-stdin`).
 - OCI registry, repository and tag values must be forced to lowercase (e.g. `${IMAGE_REGISTRY,,}`).
 
-## GitVersion
+## Versioning
 
 - Always set `fetch-depth: 0` on checkout when GitVersion is in use.
 - Default config file is `GitVersion.yml` in the repository root.
 - Prefer `semVer` for tags and releases; use `fullSemVer` (via the `version` output) for build versioning and pre-release identifiers.
+- Publish each GitHub Actions release with an immutable `vMAJOR.MINOR.PATCH` tag, then move the floating `vMAJOR` alias to the same commit.
+- Consumers should reference the floating major alias, such as `owner/action@v1`, to receive compatible fixes without changing workflow files.
+- Move a major alias only after its immutable release tag succeeds. Never create floating minor, patch or pre-release aliases.
+- Keep the reusable release workflow defaults `tag-prefix: v` and `move-major-tag: true` for GitHub Actions; non-Action repositories must override both settings for their own release convention.
