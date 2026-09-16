@@ -20,6 +20,11 @@ on:
         type: string
         description: GitHub environment used to scope secrets and approvals, e.g. dev
         default: ''
+      #Files contain top-level key/value pairs and are processed in order, so later files override earlier ones.
+      environment-files:
+        type: string
+        description: Newline-separated YAML environment files relative to the repository root
+        default: ''
       #Repeat one setting per line, e.g. a storage account plus the state key. Combines with backend-config-file.
       backend-config:
         type: string
@@ -28,6 +33,11 @@ on:
       backend-config-file:
         type: string
         description: Backend settings file, relative to working-directory, e.g. ../../config/dev.tfbackend
+        default: ''
+      #Uses TF_VAR_backend_resource_group_name, TF_VAR_backend_storage_account_name and TF_VAR_backend_container_name.
+      azure-backend-key:
+        type: string
+        description: Azure backend state key assembled from loaded environment variables
         default: ''
       var-file:
         type: string
@@ -106,6 +116,27 @@ jobs:
         with:
           fetch-depth: 1
 
+      - name: load environment files
+        if: inputs.environment-files != ''
+        working-directory: ${{ github.workspace }}
+        env:
+          ENVIRONMENT_FILES: ${{ inputs.environment-files }}
+        run: |
+          while IFS= read -r FILE; do
+            if [ -z "$FILE" ]; then
+              continue
+            fi
+            while IFS=': ' read -r KEY VALUE; do
+              if [ -z "$KEY" ] || [[ "$KEY" == \#* ]]; then
+                continue
+              fi
+              VALUE="${VALUE%%#*}"
+              VALUE="$(echo "$VALUE" | xargs)"
+              echo "$KEY=$VALUE" >> "$GITHUB_ENV"
+              export "$KEY=$VALUE"
+            done < "$FILE"
+          done <<< "$ENVIRONMENT_FILES"
+
       - name: azure/login (oidc)
         if: inputs.command != 'validate' && inputs.azure-login && inputs.use-oidc
         uses: azure/login@v3
@@ -134,12 +165,22 @@ jobs:
 
       - name: terraform init
         env:
+          AZURE_BACKEND_KEY: ${{ inputs.azure-backend-key }}
           BACKEND_CONFIG: ${{ inputs.backend-config }}
           BACKEND_CONFIG_FILE: ${{ inputs.backend-config-file }}
         run: |
           ARGS=(-input=false)
           if [ "${{ inputs.command }}" = "validate" ]; then
             ARGS+=("-backend=false")
+          fi
+          if [ -n "$AZURE_BACKEND_KEY" ]; then
+            : "${TF_VAR_backend_resource_group_name:?Missing TF_VAR_backend_resource_group_name}"
+            : "${TF_VAR_backend_storage_account_name:?Missing TF_VAR_backend_storage_account_name}"
+            : "${TF_VAR_backend_container_name:?Missing TF_VAR_backend_container_name}"
+            ARGS+=("-backend-config=resource_group_name=$TF_VAR_backend_resource_group_name")
+            ARGS+=("-backend-config=storage_account_name=$TF_VAR_backend_storage_account_name")
+            ARGS+=("-backend-config=container_name=$TF_VAR_backend_container_name")
+            ARGS+=("-backend-config=key=$AZURE_BACKEND_KEY")
           fi
           if [ -n "$BACKEND_CONFIG_FILE" ]; then
             ARGS+=("-backend-config=$BACKEND_CONFIG_FILE")
