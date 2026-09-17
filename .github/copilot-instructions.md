@@ -8,7 +8,7 @@ Everything below is specific to this repository.
 
 ## Workflow Diagram Conventions
 
-Beyond the shared Mermaid guidance in `documentation.instructions.md`:
+Beyond the shared Mermaid guidance in `markdown.instructions.md`:
 
 - Use `flowchart` for a workflow chain or the steps of a composite action, and `graph` for action dependencies and workflow call chains.
 - Use the stadium shape `([ ])` for a reusable workflow, and the rectangle `[ ]` for an action or a job.
