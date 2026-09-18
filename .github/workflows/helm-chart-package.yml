@@ -3,6 +3,10 @@ name: _helm-chart-package
 on:
   workflow_call:
     inputs:
+      runs-on:
+        type: string
+        description: Runner label, e.g. ubuntu-24.04-arm for a native arm64 build.
+        default: ubuntu-latest
       tag:
         type: string
         description: e.g. 1.2.3
@@ -60,7 +64,7 @@ on:
 
 jobs:
   helm-chart-package:
-    runs-on: ubuntu-latest
+    runs-on: ${{ inputs.runs-on }}
     steps:
       - uses: actions/checkout@v7
         with:

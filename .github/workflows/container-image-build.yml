@@ -4,6 +4,10 @@ name: _container-image-build
 on:
   workflow_call:
     inputs:
+      runs-on:
+        type: string
+        description: Runner label, e.g. ubuntu-24.04-arm to build arm64 natively instead of under QEMU.
+        default: ubuntu-latest
       registry:
         type: string
         description: e.g. ghcr.io/gh-user, xyz.azurecr.io or docker.io
@@ -81,7 +85,7 @@ on:
 
 jobs:
   container-image-build:
-    runs-on: ubuntu-latest
+    runs-on: ${{ inputs.runs-on }}
     if: github.actor != 'dependabot[bot]'
     #https://github.blog/changelog/2021-04-20-github-actions-control-permissions-for-github_token/
     #https://docs.github.com/en/actions/using-jobs/assigning-permissions-to-jobs

@@ -3,6 +3,10 @@ name: _app-build-go
 on:
   workflow_call:
     inputs:
+      runs-on:
+        type: string
+        description: Runner label, e.g. ubuntu-24.04-arm for a native arm64 build.
+        default: ubuntu-latest
       version:
         type: string
         description: e.g. 1.2.301-feature-my-feature.12+56
@@ -22,7 +26,7 @@ on:
 
 jobs:
   app-build-go:
-    runs-on: ubuntu-latest
+    runs-on: ${{ inputs.runs-on }}
     steps:
       - uses: actions/checkout@v7
         with:
