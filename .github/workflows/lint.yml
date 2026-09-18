@@ -3,6 +3,10 @@ name: _lint
 on:
   workflow_call:
     inputs:
+      runs-on:
+        type: string
+        description: Runner label, e.g. ubuntu-24.04-arm for a native arm64 build.
+        default: ubuntu-latest
       pre-commit-version:
         description: Set pre-commit version.
         type: string
@@ -10,7 +14,7 @@ on:
 
 jobs:
   lint:
-    runs-on: ubuntu-latest
+    runs-on: ${{ inputs.runs-on }}
     steps:
       - uses: actions/checkout@v7
         with:

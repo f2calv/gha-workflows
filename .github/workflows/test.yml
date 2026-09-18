@@ -13,6 +13,10 @@ on:
         default: true
   workflow_call:
     inputs:
+      runs-on:
+        type: string
+        description: Runner label, e.g. ubuntu-24.04-arm for a native arm64 build.
+        default: ubuntu-latest
       test-true:
         required: false
         type: boolean
@@ -20,7 +24,7 @@ on:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: ${{ inputs.runs-on }}
     steps:
       #workflow_dispatch fails
       - name: test1

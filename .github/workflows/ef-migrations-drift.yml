@@ -3,6 +3,10 @@ name: _ef-migrations-drift
 on:
   workflow_call:
     inputs:
+      runs-on:
+        type: string
+        description: Runner label, e.g. ubuntu-24.04-arm for a native arm64 build.
+        default: ubuntu-latest
       project:
         type: string
         description: Migrations/target project or solution (e.g. src/CasCap.Data/CasCap.Data.csproj)
@@ -28,7 +32,7 @@ on:
 
 jobs:
   ef-migrations-drift:
-    runs-on: ubuntu-latest
+    runs-on: ${{ inputs.runs-on }}
     permissions:
       contents: read
     steps:

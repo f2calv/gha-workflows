@@ -4,6 +4,10 @@ name: _terraform
 on:
   workflow_call:
     inputs:
+      runs-on:
+        type: string
+        description: Runner label, e.g. ubuntu-24.04-arm for a native arm64 build.
+        default: ubuntu-latest
       command:
         type: string
         description: e.g. validate, plan, apply, plan+apply or destroy
@@ -94,7 +98,7 @@ permissions: {}
 jobs:
   terraform:
     name: terraform ${{ inputs.command }}
-    runs-on: ubuntu-latest
+    runs-on: ${{ inputs.runs-on }}
     environment: ${{ inputs.environment }}
     permissions:
       contents: read
