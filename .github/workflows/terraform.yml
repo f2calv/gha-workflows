@@ -145,15 +145,19 @@ jobs:
             if [ -z "$FILE" ]; then
               continue
             fi
-            while IFS=': ' read -r KEY VALUE; do
-              if [ -z "$KEY" ] || [[ "$KEY" == \#* ]]; then
-                continue
-              fi
-              VALUE="${VALUE%%#*}"
-              VALUE="$(echo "$VALUE" | xargs)"
-              echo "$KEY=$VALUE" >> "$GITHUB_ENV"
-              export "$KEY=$VALUE"
-            done < "$FILE"
+            ruby -ryaml -rsecurerandom -e '
+              values = YAML.safe_load_file(ARGV.fetch(0), aliases: true)
+              File.open(ENV.fetch("GITHUB_ENV"), "a") do |environment|
+                values.each do |key, value|
+                  unless value.is_a?(String) || value.is_a?(Numeric) || value == true || value == false
+                    abort "#{ARGV.fetch(0)}: #{key} must be a scalar value"
+                  end
+
+                  delimiter = "ENV_#{SecureRandom.hex(16)}"
+                  environment.puts "#{key}<<#{delimiter}", value, delimiter
+                end
+              end
+            ' "$FILE"
           done <<< "$ENVIRONMENT_FILES"
 
       - name: azure/login (oidc)
