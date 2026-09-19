@@ -43,7 +43,7 @@ GitHub release.
 
 | Workflow | Description | Key Inputs |
 | --- | --- | --- |
-| [Terraform](.github/workflows/terraform.yml) | Run Terraform formatting and validation without cloud credentials, or run the stateful `plan`, `apply`, and `destroy` lifecycle with Azure authentication. Validation uses backend-free initialization and can verify an expected immutable module tag in the README. A `plan` run uploads the plan as an artifact so a later `apply` run can consume exactly that plan. | `working-directory` (required), `command`, `terraform-version`, `environment-files`, `backend-config`, `backend-config-file`, `azure-backend-key`, `var-file`, `use-oidc`, `azure-login`, `expected-release-tag`, `readme-path` |
+| [Terraform](.github/workflows/terraform.yml) | Run Terraform formatting and validation without cloud credentials, or run the stateful `plan`, `apply`, and `destroy` lifecycle with Azure authentication. Validation uses backend-free initialization and can verify an expected immutable module tag in the README. A `plan` run uploads the plan as an artifact so a later `apply` run can consume exactly that plan. Deployment metadata inputs are exported as `TF_VAR_iac_*` for resource provenance tags. | `working-directory` (required), `command`, `terraform-version`, `environment-files`, `backend-config`, `backend-config-file`, `azure-backend-key`, `var-file`, `use-oidc`, `azure-login`, `deployment-version`, `deployment-commit`, `deployment-layer`, `expected-release-tag`, `readme-path` |
 
 ### Containers & Helm
 
