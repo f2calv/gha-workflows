@@ -104,8 +104,11 @@ jobs:
 
       - name: configure Docker Compose (test services)
         if: (github.event_name == 'pull_request' || inputs.execute-tests) && inputs.test-compose-services != '[]'
+        id: compose
         shell: bash
-        run: echo "COMPOSE_PROJECT_NAME=gha-${{ github.run_id }}-${{ github.run_attempt }}-${RANDOM}${RANDOM}" >> "$GITHUB_ENV"
+        run: |
+          echo "COMPOSE_PROJECT_NAME=gha-${{ github.run_id }}-${{ github.run_attempt }}-${RANDOM}${RANDOM}" >> "$GITHUB_ENV"
+          echo 'configured=true' >> "$GITHUB_OUTPUT"
 
       - name: docker compose up (test services)
         if: (github.event_name == 'pull_request' || inputs.execute-tests) && inputs.test-compose-services != '[]'
@@ -160,7 +163,7 @@ jobs:
           "${command[@]}"
 
       - name: docker compose down (test services)
-        if: always() && (github.event_name == 'pull_request' || inputs.execute-tests) && inputs.test-compose-services != '[]' && env.COMPOSE_PROJECT_NAME != ''
+        if: always() && steps.compose.outputs.configured == 'true'
         shell: bash
         env:
           COMPOSE_FILE: ${{ inputs.test-compose-file }}
