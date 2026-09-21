@@ -34,6 +34,9 @@ GitHub release.
 | [App Build Python](.github/workflows/app-build-python.yml) | Validate the uv lockfile, restore all dependency groups, run Ruff, mypy and pytest, then build the Python package. | `version` (required), `runs-on` |
 | [App Build Rust](.github/workflows/app-build-rust.yml) | Check formatting, run Clippy, fetch dependencies and build a Rust project. | `version` (required), `runs-on` |
 
+`dotnet-test-args` is a JSON array so each argument remains distinct, including values containing
+spaces. For example: `["--filter", "FullyQualifiedName~Tests With Spaces"]`.
+
 ### Mobile Deployment
 
 | Workflow | Description | Key Inputs |

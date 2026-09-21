@@ -37,8 +37,8 @@ on:
         default: ''
       dotnet-test-args:
         type: string
-        description: Optional 'dotnet test' arguments.
-        default: ''
+        description: JSON array of optional 'dotnet test' arguments.
+        default: '[]'
       extra-repos:
         type: string
         description: >
@@ -86,8 +86,17 @@ jobs:
       - name: dotnet build
         run: dotnet build ${{ inputs.solution-name }} -c ${{ inputs.configuration }} --nologo --no-restore -p:Version='${{ inputs.version }}' -p:SourceRevisionId=${{ github.sha }} ${{ inputs.dotnet-build-args }}
 
+      - name: dotnet restore (test target)
+        if: inputs.test-solution-name != '' && inputs.test-solution-name != inputs.solution-name
+        run: dotnet restore ${{ inputs.test-solution-name }} --verbosity minimal ${{ inputs.dotnet-restore-args }}
+
+      - name: dotnet build (test target)
+        if: inputs.test-solution-name != '' && inputs.test-solution-name != inputs.solution-name
+        run: dotnet build ${{ inputs.test-solution-name }} -c ${{ inputs.configuration }} --no-restore --nologo -p:Version='${{ inputs.version }}' -p:SourceRevisionId=${{ github.sha }} ${{ inputs.dotnet-build-args }}
+
       - name: dotnet test
         if: github.event_name == 'pull_request' || inputs.execute-tests
+        shell: bash
         env:
           CONFIGURATION: ${{ inputs.configuration }}
           DOTNET_TEST_ARGS: ${{ inputs.dotnet-test-args }}
@@ -106,7 +115,11 @@ jobs:
             command+=("$TEST_TARGET")
           fi
           command+=(-c "$CONFIGURATION" --no-restore --no-build)
-          read -ra extra_args <<<"$DOTNET_TEST_ARGS"
+          if ! jq -e 'type == "array" and all(.[]; type == "string")' <<<"$DOTNET_TEST_ARGS" >/dev/null; then
+            echo "::error::dotnet-test-args must be a JSON array of strings."
+            exit 1
+          fi
+          mapfile -t extra_args < <(jq -r '.[]' <<<"$DOTNET_TEST_ARGS")
           command+=("${extra_args[@]}")
           echo "${command[*]}"
           "${command[@]}"
