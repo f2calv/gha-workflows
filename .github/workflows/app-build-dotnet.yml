@@ -27,6 +27,18 @@ on:
         type: string
         description: Optional 'dotnet build' arguments.
         default: ''
+      execute-tests:
+        type: boolean
+        description: Execute tests unless explicitly disabled outside pull requests.
+        default: true
+      test-solution-name:
+        type: string
+        description: .NET solution or project to test e.g. MySolution.slnx or MyTests.csproj
+        default: ''
+      dotnet-test-args:
+        type: string
+        description: JSON array of optional 'dotnet test' arguments.
+        default: '[]'
       extra-repos:
         type: string
         description: >
@@ -74,4 +86,40 @@ jobs:
       - name: dotnet build
         run: dotnet build ${{ inputs.solution-name }} -c ${{ inputs.configuration }} --nologo --no-restore -p:Version='${{ inputs.version }}' -p:SourceRevisionId=${{ github.sha }} ${{ inputs.dotnet-build-args }}
 
-      #TODO: could run dotnet test here, etc...
+      - name: dotnet restore (test target)
+        if: inputs.test-solution-name != '' && inputs.test-solution-name != inputs.solution-name
+        run: dotnet restore ${{ inputs.test-solution-name }} --verbosity minimal ${{ inputs.dotnet-restore-args }}
+
+      - name: dotnet build (test target)
+        if: inputs.test-solution-name != '' && inputs.test-solution-name != inputs.solution-name
+        run: dotnet build ${{ inputs.test-solution-name }} -c ${{ inputs.configuration }} --no-restore --nologo -p:Version='${{ inputs.version }}' -p:SourceRevisionId=${{ github.sha }} ${{ inputs.dotnet-build-args }}
+
+      - name: dotnet test
+        if: github.event_name == 'pull_request' || inputs.execute-tests
+        shell: bash
+        env:
+          CONFIGURATION: ${{ inputs.configuration }}
+          DOTNET_TEST_ARGS: ${{ inputs.dotnet-test-args }}
+          TEST_TARGET: ${{ inputs.test-solution-name || inputs.solution-name }}
+        run: |
+          set -euo pipefail
+          command=(dotnet test)
+          if jq -e '.test.runner == "Microsoft.Testing.Platform"' global.json >/dev/null 2>&1; then
+            case "$TEST_TARGET" in
+              '') ;;
+              *.sln | *.slnx) command+=(--solution "$TEST_TARGET") ;;
+              *.csproj) command+=(--project "$TEST_TARGET") ;;
+              *) echo "::error::test-solution-name must resolve to a .sln, .slnx or .csproj file."; exit 1 ;;
+            esac
+          elif [[ -n "$TEST_TARGET" ]]; then
+            command+=("$TEST_TARGET")
+          fi
+          command+=(-c "$CONFIGURATION" --no-restore --no-build)
+          if ! jq -e 'type == "array" and all(.[]; type == "string")' <<<"$DOTNET_TEST_ARGS" >/dev/null; then
+            echo "::error::dotnet-test-args must be a JSON array of strings."
+            exit 1
+          fi
+          mapfile -t extra_args < <(jq -r '.[]' <<<"$DOTNET_TEST_ARGS")
+          command+=("${extra_args[@]}")
+          echo "${command[*]}"
+          "${command[@]}"
