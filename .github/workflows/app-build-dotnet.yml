@@ -33,11 +33,19 @@ on:
         default: true
       test-solution-name:
         type: string
-        description: .NET solution or project to test e.g. MySolution.slnx or MyTests.csproj
+        description: Optional .NET solution or project to test; empty uses solution-name.
         default: ''
       dotnet-test-args:
         type: string
         description: JSON array of optional 'dotnet test' arguments.
+        default: '[]'
+      test-compose-file:
+        type: string
+        description: Optional Compose file used to provision test services.
+        default: ''
+      test-compose-services:
+        type: string
+        description: JSON array of Compose services required by tests.
         default: '[]'
       extra-repos:
         type: string
@@ -94,6 +102,28 @@ jobs:
         if: inputs.test-solution-name != '' && inputs.test-solution-name != inputs.solution-name
         run: dotnet build ${{ inputs.test-solution-name }} -c ${{ inputs.configuration }} --no-restore --nologo -p:Version='${{ inputs.version }}' -p:SourceRevisionId=${{ github.sha }} ${{ inputs.dotnet-build-args }}
 
+      - name: docker compose up (test services)
+        if: (github.event_name == 'pull_request' || inputs.execute-tests) && inputs.test-compose-services != '[]'
+        shell: bash
+        env:
+          COMPOSE_FILE: ${{ inputs.test-compose-file }}
+          COMPOSE_SERVICES: ${{ inputs.test-compose-services }}
+        run: |
+          set -euo pipefail
+          if ! jq -e 'type == "array" and length > 0 and all(.[]; type == "string" and length > 0)' <<<"$COMPOSE_SERVICES" >/dev/null; then
+            echo "::error::test-compose-services must be a non-empty JSON array of service names."
+            exit 1
+          fi
+          command=(docker compose)
+          if [[ -n "$COMPOSE_FILE" ]]; then
+            command+=(--file "$COMPOSE_FILE")
+          fi
+          mapfile -t services < <(jq -r '.[]' <<<"$COMPOSE_SERVICES")
+          command+=(up --detach --wait)
+          command+=("${services[@]}")
+          echo "${command[*]}"
+          "${command[@]}"
+
       - name: dotnet test
         if: github.event_name == 'pull_request' || inputs.execute-tests
         shell: bash
@@ -121,5 +151,20 @@ jobs:
           fi
           mapfile -t extra_args < <(jq -r '.[]' <<<"$DOTNET_TEST_ARGS")
           command+=("${extra_args[@]}")
+          echo "${command[*]}"
+          "${command[@]}"
+
+      - name: docker compose down (test services)
+        if: always() && (github.event_name == 'pull_request' || inputs.execute-tests) && inputs.test-compose-services != '[]'
+        shell: bash
+        env:
+          COMPOSE_FILE: ${{ inputs.test-compose-file }}
+        run: |
+          set -euo pipefail
+          command=(docker compose)
+          if [[ -n "$COMPOSE_FILE" ]]; then
+            command+=(--file "$COMPOSE_FILE")
+          fi
+          command+=(down)
           echo "${command[*]}"
           "${command[@]}"

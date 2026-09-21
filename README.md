@@ -29,13 +29,19 @@ GitHub release.
 
 | Workflow | Description | Key Inputs |
 | --- | --- | --- |
-| [App Build .NET](.github/workflows/app-build-dotnet.yml) | Restore, workload restore, build and test a .NET solution/project. Installs .NET 8/9/10 SDKs. Optionally clones extra repositories into the build context. | `version` (required), `runs-on`, `solution-name`, `configuration`, `execute-tests`, `test-solution-name`, `dotnet-restore-args`, `dotnet-build-args`, `dotnet-test-args`, `extra-repos` |
+| [App Build .NET](.github/workflows/app-build-dotnet.yml) | Restore, workload restore, build and test a .NET solution/project. Installs .NET 8/9/10 SDKs. Optionally provisions selected Compose services and clones extra repositories into the build context. | `version` (required), `runs-on`, `solution-name`, `configuration`, `execute-tests`, `test-solution-name`, `dotnet-restore-args`, `dotnet-build-args`, `dotnet-test-args`, `test-compose-file`, `test-compose-services`, `extra-repos` |
 | [App Build Go](.github/workflows/app-build-go.yml) | Check formatting and modules, run `go vet`, staticcheck, build and test a Go module. The toolchain version comes from `go.mod`. | `version` (required), `runs-on`, `go-version-file`, `package`, `ldflags` |
 | [App Build Python](.github/workflows/app-build-python.yml) | Validate the uv lockfile, restore all dependency groups, run Ruff, mypy and pytest, then build the Python package. | `version` (required), `runs-on` |
 | [App Build Rust](.github/workflows/app-build-rust.yml) | Check formatting, run Clippy, fetch dependencies and build a Rust project. | `version` (required), `runs-on` |
 
 `dotnet-test-args` is a JSON array so each argument remains distinct, including values containing
 spaces. For example: `["--filter", "FullyQualifiedName~Tests With Spaces"]`.
+
+Tests target `solution-name` by default. Set `test-solution-name` only when a different solution or
+project must be tested independently.
+
+`test-compose-services` is a JSON array of services to start before testing and stop afterward. Set
+`test-compose-file` only when the repository does not use the default Compose filename.
 
 ### Mobile Deployment
 
