@@ -29,7 +29,7 @@ GitHub release.
 
 | Workflow | Description | Key Inputs |
 | --- | --- | --- |
-| [App Build .NET](.github/workflows/app-build-dotnet.yml) | Restore, workload restore, build a .NET solution/project. Installs .NET 8/9/10 SDKs. Optionally clones extra repositories into the build context. | `version` (required), `solution-name`, `configuration`, `dotnet-restore-args`, `dotnet-build-args`, `extra-repos` |
+| [App Build .NET](.github/workflows/app-build-dotnet.yml) | Restore, workload restore, build and test a .NET solution/project. Installs .NET 8/9/10 SDKs. Optionally clones extra repositories into the build context. | `version` (required), `solution-name`, `configuration`, `execute-tests`, `test-solution-name`, `dotnet-restore-args`, `dotnet-build-args`, `dotnet-test-args`, `extra-repos` |
 | [App Build Go](.github/workflows/app-build-go.yml) | `gofmt` check, `go mod verify`, `go vet`, staticcheck, build and test a Go module. Toolchain version is sourced from `go.mod`. | `version` (required), `go-version-file`, `package`, `ldflags` |
 | [App Build Rust](.github/workflows/app-build-rust.yml) | Format check, clippy lint, fetch and build a Rust project. | `version` (required) |
 
