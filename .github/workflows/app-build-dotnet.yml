@@ -57,8 +57,6 @@ on:
 jobs:
   app-build-dotnet:
     runs-on: ${{ inputs.runs-on }}
-    env:
-      COMPOSE_PROJECT_NAME: gha-${{ github.run_id }}-${{ github.run_attempt }}
     #if: github.actor != 'dependabot[bot]'
     steps:
       - uses: actions/checkout@v7
@@ -103,6 +101,11 @@ jobs:
       - name: dotnet build (test target)
         if: inputs.test-solution-name != '' && inputs.test-solution-name != inputs.solution-name
         run: dotnet build ${{ inputs.test-solution-name }} -c ${{ inputs.configuration }} --no-restore --nologo -p:Version='${{ inputs.version }}' -p:SourceRevisionId=${{ github.sha }} ${{ inputs.dotnet-build-args }}
+
+      - name: configure Docker Compose (test services)
+        if: (github.event_name == 'pull_request' || inputs.execute-tests) && inputs.test-compose-services != '[]'
+        shell: bash
+        run: echo "COMPOSE_PROJECT_NAME=gha-${{ github.run_id }}-${{ github.run_attempt }}-${RANDOM}${RANDOM}" >> "$GITHUB_ENV"
 
       - name: docker compose up (test services)
         if: (github.event_name == 'pull_request' || inputs.execute-tests) && inputs.test-compose-services != '[]'
@@ -157,7 +160,7 @@ jobs:
           "${command[@]}"
 
       - name: docker compose down (test services)
-        if: always() && (github.event_name == 'pull_request' || inputs.execute-tests) && inputs.test-compose-services != '[]'
+        if: always() && (github.event_name == 'pull_request' || inputs.execute-tests) && inputs.test-compose-services != '[]' && env.COMPOSE_PROJECT_NAME != ''
         shell: bash
         env:
           COMPOSE_FILE: ${{ inputs.test-compose-file }}
