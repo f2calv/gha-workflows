@@ -248,7 +248,7 @@ jobs:
         run: |
           EXTRA_ARGS=()
           if [[ "${{ inputs.has-image }}" == "true" ]]; then
-            EXTRA_ARGS=(--helm-lint-extra-args "--set image.tag=$TAG")
+            EXTRA_ARGS=(--helm-lint-extra-args "--set=image.tag=$TAG")
           fi
           docker run --rm --network host --workdir=/data --volume ~/.kube/config:/root/.kube/config:ro \
             --volume $(pwd):/data quay.io/helmpack/chart-testing:${{ inputs.chart-testing-cli-version }} \
@@ -262,9 +262,9 @@ jobs:
           EXTRA_ARGS=()
           if [[ "${{ inputs.has-image }}" == "true" ]]; then
             #Note: we can only fully install the chart if we have pushed the image as well, assumption inputs.push-chart == inputs.push-image
-            ARGS="--set image.tag=$TAG"
+            ARGS="--set=image.tag=$TAG"
             if [[ "${{ inputs.push-chart }}" == "false" ]]; then
-              ARGS="--set image.repository=nginx --set image.tag=latest"
+              ARGS="--set=image.repository=nginx --set=image.tag=latest"
             fi
             EXTRA_ARGS=(--helm-extra-set-args "$ARGS")
           fi
