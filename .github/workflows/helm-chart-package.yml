@@ -42,6 +42,10 @@ on:
         type: boolean
         description: Is the helm chart a library chart?
         default: false
+      set-chart-app-version:
+        type: boolean
+        description: Set Chart.yaml appVersion and the packaged app version from tag.
+        default: true
       has-image:
         type: boolean
         description: Whether the chart owns image and provenance values.
@@ -168,9 +172,10 @@ jobs:
             yq -i '(.dependencies.[] | select(.name == env(CHART_DEPENDENCY)) | .repository) = env(DEPENDENCY_REPOSITORY)' $CHART_PATH/Chart.yaml
           fi
 
-          printf "\n\nUpdate the version+appVersion in the Chart.yaml\n"
+          printf "\n\nUpdate the version in the Chart.yaml\n"
           yq -i '.version = env(TAG)' $CHART_PATH/Chart.yaml
-          if [[ "${{ inputs.is-library-chart }}" == "false" ]]; then
+          if [[ "${{ inputs.set-chart-app-version }}" == "true" ]]; then
+            printf "\nUpdate the appVersion in the Chart.yaml\n"
             yq -i '.appVersion = env(TAG)' $CHART_PATH/Chart.yaml
           fi
           cat $CHART_PATH/Chart.yaml
@@ -213,8 +218,12 @@ jobs:
 
           if [[ "${{ inputs.is-library-chart }}" == "false" ]]; then
             #https://helm.sh/docs/helm/helm_package/
-            printf "\n\n>helm package $CHART_PATH --destination ${{ github.workspace }}/artifacts/ --version $TAG --app-version $TAG\n"
-            helm package $CHART_PATH --destination ${{ github.workspace }}/artifacts/ --version $TAG --app-version $TAG
+            PACKAGE_ARGS=(--destination ${{ github.workspace }}/artifacts/ --version $TAG)
+            if [[ "${{ inputs.set-chart-app-version }}" == "true" ]]; then
+              PACKAGE_ARGS+=(--app-version $TAG)
+            fi
+            printf "\n\n>helm package $CHART_PATH ${PACKAGE_ARGS[*]}\n"
+            helm package $CHART_PATH "${PACKAGE_ARGS[@]}"
 
             #https://helm.sh/docs/helm/helm_template/
             printf "\n\n>helm template $CHART_NAME $CHART_PATH > ${{ github.workspace }}/artifacts/$CHART_NAME.yaml\n"
