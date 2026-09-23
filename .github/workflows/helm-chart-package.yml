@@ -42,6 +42,10 @@ on:
         type: boolean
         description: Is the helm chart a library chart?
         default: false
+      set-chart-app-version:
+        type: boolean
+        description: Set Chart.yaml appVersion and the packaged app version from tag.
+        default: true
       has-image:
         type: boolean
         description: Whether the chart owns image and provenance values.
@@ -146,6 +150,7 @@ jobs:
           printf "\nCHART_REGISTRY=$CHART_REGISTRY" >> $GITHUB_ENV
           printf "\nCHART_REPOSITORY_PREFIX=$CHART_REPOSITORY_PREFIX" >> $GITHUB_ENV
           printf "\nCHART_NAME=$CHART_NAME" >> $GITHUB_ENV
+          printf "\nCHART_PATH=$CHART_PATH" >> $GITHUB_ENV
           printf "\nTAG=$TAG" >> $GITHUB_ENV
 
           if [[ "${#LABEL}" -gt 63 ]]; then
@@ -168,9 +173,10 @@ jobs:
             yq -i '(.dependencies.[] | select(.name == env(CHART_DEPENDENCY)) | .repository) = env(DEPENDENCY_REPOSITORY)' $CHART_PATH/Chart.yaml
           fi
 
-          printf "\n\nUpdate the version+appVersion in the Chart.yaml\n"
+          printf "\n\nUpdate the version in the Chart.yaml\n"
           yq -i '.version = env(TAG)' $CHART_PATH/Chart.yaml
-          if [[ "${{ inputs.is-library-chart }}" == "false" ]]; then
+          if [[ "${{ inputs.set-chart-app-version }}" == "true" ]]; then
+            printf "\nUpdate the appVersion in the Chart.yaml\n"
             yq -i '.appVersion = env(TAG)' $CHART_PATH/Chart.yaml
           fi
           cat $CHART_PATH/Chart.yaml
@@ -213,8 +219,12 @@ jobs:
 
           if [[ "${{ inputs.is-library-chart }}" == "false" ]]; then
             #https://helm.sh/docs/helm/helm_package/
-            printf "\n\n>helm package $CHART_PATH --destination ${{ github.workspace }}/artifacts/ --version $TAG --app-version $TAG\n"
-            helm package $CHART_PATH --destination ${{ github.workspace }}/artifacts/ --version $TAG --app-version $TAG
+            PACKAGE_ARGS=(--destination ${{ github.workspace }}/artifacts/ --version $TAG)
+            if [[ "${{ inputs.set-chart-app-version }}" == "true" ]]; then
+              PACKAGE_ARGS+=(--app-version $TAG)
+            fi
+            printf "\n\n>helm package $CHART_PATH ${PACKAGE_ARGS[*]}\n"
+            helm package $CHART_PATH "${PACKAGE_ARGS[@]}"
 
             #https://helm.sh/docs/helm/helm_template/
             printf "\n\n>helm template $CHART_NAME $CHART_PATH > ${{ github.workspace }}/artifacts/$CHART_NAME.yaml\n"
@@ -239,7 +249,7 @@ jobs:
         run: |
           EXTRA_ARGS=()
           if [[ "${{ inputs.has-image }}" == "true" ]]; then
-            EXTRA_ARGS=(--helm-lint-extra-args "--set image.tag=$TAG")
+            EXTRA_ARGS=(--helm-lint-extra-args "--set=image.tag=$TAG")
           fi
           docker run --rm --network host --workdir=/data --volume ~/.kube/config:/root/.kube/config:ro \
             --volume $(pwd):/data quay.io/helmpack/chart-testing:${{ inputs.chart-testing-cli-version }} \
@@ -253,9 +263,9 @@ jobs:
           EXTRA_ARGS=()
           if [[ "${{ inputs.has-image }}" == "true" ]]; then
             #Note: we can only fully install the chart if we have pushed the image as well, assumption inputs.push-chart == inputs.push-image
-            ARGS="--set image.tag=$TAG"
+            ARGS="--set=image.tag=$TAG"
             if [[ "${{ inputs.push-chart }}" == "false" ]]; then
-              ARGS="--set image.repository=nginx --set image.tag=latest"
+              ARGS="--set=image.repository=nginx --set=image.tag=latest"
             fi
             EXTRA_ARGS=(--helm-extra-set-args "$ARGS")
           fi
