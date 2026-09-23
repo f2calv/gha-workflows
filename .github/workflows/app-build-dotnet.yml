@@ -39,6 +39,14 @@ on:
         type: string
         description: JSON array of optional 'dotnet test' arguments.
         default: '[]'
+      collect-coverage:
+        type: boolean
+        description: Collect Microsoft.Testing.Platform XML coverage.
+        default: false
+      coverage-artifact-name:
+        type: string
+        description: Coverage artifact name.
+        default: dotnet-coverage
       test-compose-file:
         type: string
         description: Optional Compose file used to provision test services.
@@ -159,8 +167,23 @@ jobs:
           fi
           mapfile -t extra_args < <(jq -r '.[]' <<<"$DOTNET_TEST_ARGS")
           command+=("${extra_args[@]}")
+          if [[ "${{ inputs.collect-coverage }}" == "true" ]]; then
+            if ! jq -e '.test.runner == "Microsoft.Testing.Platform"' global.json >/dev/null 2>&1; then
+              echo "::error::collect-coverage requires Microsoft.Testing.Platform."
+              exit 1
+            fi
+            command+=(--coverage --coverage-output-format xml --coverage-output sonar-coverage.xml)
+          fi
           echo "${command[*]}"
           "${command[@]}"
+
+      - uses: actions/upload-artifact@v7
+        if: inputs.collect-coverage && (github.event_name == 'pull_request' || inputs.execute-tests)
+        with:
+          name: ${{ inputs.coverage-artifact-name }}
+          path: TestResults/sonar-coverage.xml
+          if-no-files-found: error
+          retention-days: 1
 
       - name: docker compose down (test services)
         if: always() && steps.compose.outputs.configured == 'true'
