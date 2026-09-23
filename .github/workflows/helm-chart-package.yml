@@ -150,6 +150,7 @@ jobs:
           printf "\nCHART_REGISTRY=$CHART_REGISTRY" >> $GITHUB_ENV
           printf "\nCHART_REPOSITORY_PREFIX=$CHART_REPOSITORY_PREFIX" >> $GITHUB_ENV
           printf "\nCHART_NAME=$CHART_NAME" >> $GITHUB_ENV
+          printf "\nCHART_PATH=$CHART_PATH" >> $GITHUB_ENV
           printf "\nTAG=$TAG" >> $GITHUB_ENV
 
           if [[ "${#LABEL}" -gt 63 ]]; then
