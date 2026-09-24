@@ -172,7 +172,7 @@ jobs:
               echo "::error::collect-coverage requires Microsoft.Testing.Platform."
               exit 1
             fi
-            command+=(--coverage --coverage-output-format xml --coverage-output sonar-coverage.xml)
+            command+=(--coverage --coverage-output-format xml)
           fi
           echo "${command[*]}"
           "${command[@]}"
@@ -181,7 +181,7 @@ jobs:
         if: inputs.collect-coverage && (github.event_name == 'pull_request' || inputs.execute-tests)
         with:
           name: ${{ inputs.coverage-artifact-name }}
-          path: TestResults/sonar-coverage.xml
+          path: TestResults/**/*.xml
           if-no-files-found: error
           retention-days: 1
 
