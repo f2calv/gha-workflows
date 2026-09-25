@@ -149,17 +149,17 @@ jobs:
           TEST_TARGET: ${{ inputs.test-solution-name || inputs.solution-name }}
         run: |
           set -euo pipefail
-          command=(dotnet test)
-          if jq -e '.test.runner == "Microsoft.Testing.Platform"' global.json >/dev/null 2>&1; then
-            case "$TEST_TARGET" in
-              '') ;;
-              *.sln | *.slnx) command+=(--solution "$TEST_TARGET") ;;
-              *.csproj) command+=(--project "$TEST_TARGET") ;;
-              *) echo "::error::test-solution-name must resolve to a .sln, .slnx or .csproj file."; exit 1 ;;
-            esac
-          elif [[ -n "$TEST_TARGET" ]]; then
-            command+=("$TEST_TARGET")
+          if ! jq -e '.test.runner == "Microsoft.Testing.Platform"' global.json >/dev/null 2>&1; then
+            echo "::error::global.json must select test.runner=Microsoft.Testing.Platform."
+            exit 1
           fi
+          command=(dotnet test)
+          case "$TEST_TARGET" in
+            '') ;;
+            *.sln | *.slnx) command+=(--solution "$TEST_TARGET") ;;
+            *.csproj) command+=(--project "$TEST_TARGET") ;;
+            *) echo "::error::test-solution-name must resolve to a .sln, .slnx or .csproj file."; exit 1 ;;
+          esac
           command+=(-c "$CONFIGURATION" --no-restore --no-build)
           if ! jq -e 'type == "array" and all(.[]; type == "string")' <<<"$DOTNET_TEST_ARGS" >/dev/null; then
             echo "::error::dotnet-test-args must be a JSON array of strings."
@@ -168,10 +168,6 @@ jobs:
           mapfile -t extra_args < <(jq -r '.[]' <<<"$DOTNET_TEST_ARGS")
           command+=("${extra_args[@]}")
           if [[ "${{ inputs.collect-coverage }}" == "true" ]]; then
-            if ! jq -e '.test.runner == "Microsoft.Testing.Platform"' global.json >/dev/null 2>&1; then
-              echo "::error::collect-coverage requires Microsoft.Testing.Platform."
-              exit 1
-            fi
             command+=(--coverage --coverage-output-format xml)
           fi
           echo "${command[*]}"
