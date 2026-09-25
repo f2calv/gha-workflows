@@ -6,7 +6,7 @@ on:
       runs-on:
         type: string
         description: Runner label, e.g. ubuntu-24.04-arm for a native arm64 build.
-        default: ubuntu-latest
+        default: ubuntu-24.04
       pre-commit-version:
         description: Set pre-commit version.
         type: string

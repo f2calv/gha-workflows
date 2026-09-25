@@ -8,7 +8,7 @@ on:
       runs-on:
         type: string
         description: Runner label, e.g. ubuntu-24.04-arm for a native arm64 build.
-        default: ubuntu-latest
+        default: ubuntu-24.04
       # GITHUB_TOKEN:
       #   description: e.g. USD{{ secrets.GITHUB_TOKEN }}
       #   required: true
