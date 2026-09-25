@@ -10,7 +10,7 @@ on:
       pre-commit-version:
         description: Set pre-commit version.
         type: string
-        default: 3.7.1
+        default: 4.6.2
 
 jobs:
   lint:
