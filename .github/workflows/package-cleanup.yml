@@ -6,7 +6,7 @@ on:
       runs-on:
         type: string
         description: Runner label, e.g. ubuntu-24.04-arm for a native arm64 build.
-        default: ubuntu-latest
+        default: ubuntu-24.04
       packages:
         type: string
         description: Comma-separated list of ghcr.io package names to prune, e.g. my-app,my-app/charts/my-chart

@@ -7,7 +7,7 @@ on:
       runs-on:
         type: string
         description: Runner label, e.g. ubuntu-24.04-arm to build arm64 natively instead of under QEMU.
-        default: ubuntu-latest
+        default: ubuntu-24.04
       registry:
         type: string
         description: e.g. ghcr.io/gh-user, xyz.azurecr.io or docker.io
