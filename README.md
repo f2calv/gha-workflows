@@ -75,7 +75,7 @@ project must be tested independently.
 
 | Workflow | Description | Key Inputs |
 | --- | --- | --- |
-| [Release Versioning](.github/workflows/gha-release-versioning.yml) | Determine a semantic version via GitVersion, tag the repository and create a GitHub release. | `runs-on`, `semVer`, `tag-prefix`, `move-major-tag`, `tag-and-release`, `gv-config`, `gv-source` |
+| [Release Versioning](.github/workflows/gha-release-versioning.yml) | Determine a semantic version via GitVersion, tag the repository and create a GitHub release. | `runs-on`, `semVer`, `tag-prefix`, `move-major-tag`, `tag-and-release`, `release-branch`, `gv-config`, `gv-source` |
 
 ### Code Quality
 

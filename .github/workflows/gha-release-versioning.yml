@@ -35,6 +35,11 @@ on:
         required: false
         type: boolean
         default: true
+      release-branch:
+        description: Branch allowed to create tags and releases; empty uses the repository default branch.
+        required: false
+        type: string
+        default: ''
       gv-config:
         description: Configuration filename that GitVersion will use.
         type: string
@@ -82,5 +87,6 @@ jobs:
           tag-prefix: ${{ inputs.tag-prefix }}
           move-major-tag: ${{ inputs.move-major-tag }}
           tag-and-release: ${{ inputs.tag-and-release }}
+          release-branch: ${{ inputs.release-branch }}
           gv-config: ${{ inputs.gv-config }}
           gv-source: ${{ inputs.gv-source }}
