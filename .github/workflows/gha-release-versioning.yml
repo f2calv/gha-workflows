@@ -31,10 +31,15 @@ on:
         type: boolean
         default: true
       tag-and-release:
-        description: Sets a Git tag and creates a corresponding release.
+        description: Create the full version tag and corresponding GitHub Release unless tag-only is true.
         required: false
         type: boolean
         default: true
+      tag-only:
+        description: Create only the full version tag; takes precedence over tag-and-release.
+        required: false
+        type: boolean
+        default: false
       release-branch:
         description: Branch allowed to create tags and releases; empty uses the repository default branch.
         required: false
@@ -87,6 +92,7 @@ jobs:
           tag-prefix: ${{ inputs.tag-prefix }}
           move-major-tag: ${{ inputs.move-major-tag }}
           tag-and-release: ${{ inputs.tag-and-release }}
+          tag-only: ${{ inputs.tag-only }}
           release-branch: ${{ inputs.release-branch }}
           gv-config: ${{ inputs.gv-config }}
           gv-source: ${{ inputs.gv-source }}
