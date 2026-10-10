@@ -190,17 +190,6 @@ jobs:
               yq -i '.image.tag = env(TAG_OVERRIDE)' $CHART_PATH/values.yaml
             fi
 
-            printf "\n\nAppend git repository context to the values.yaml\n"
-            yq -i '.envVars.GIT_TAG=env(TAG)' $CHART_PATH/values.yaml
-            yq -i '.envVars.GIT_REPOSITORY=env(GITHUB_REPOSITORY)' $CHART_PATH/values.yaml
-            yq -i '.envVars.GIT_BRANCH=env(GITHUB_REF)' $CHART_PATH/values.yaml
-            yq -i '.envVars.GIT_COMMIT=env(GITHUB_SHA)' $CHART_PATH/values.yaml
-
-            printf "\n\nAppend github workflow context to the values.yaml\n"
-            yq -i '.envVars.GITHUB_WORKFLOW=env(GITHUB_WORKFLOW)' $CHART_PATH/values.yaml
-            yq -i '.envVars.GITHUB_RUN_ID=env(GITHUB_RUN_ID) | .envVars.GITHUB_RUN_ID style="double"' $CHART_PATH/values.yaml
-            yq -i '.envVars.GITHUB_RUN_NUMBER=env(GITHUB_RUN_NUMBER)' $CHART_PATH/values.yaml
-
             cat $CHART_PATH/values.yaml
           fi
 

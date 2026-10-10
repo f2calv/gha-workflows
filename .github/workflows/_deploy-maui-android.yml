@@ -90,6 +90,11 @@ jobs:
             -p:ApplicationVersion=${{ inputs.app-version-code }} \
             -p:Version=${{ inputs.app-display-version }} \
             -p:SourceRevisionId=${{ github.sha }} \
+            -p:GitRepository=${{ github.repository }} \
+            -p:GitBranch=${{ github.ref }} \
+            -p:BuildWorkflow='${{ github.workflow }}' \
+            -p:BuildRunId=${{ github.run_id }} \
+            -p:BuildRunNumber=${{ github.run_number }} \
             -p:AndroidSigningKeyStore=${{ env.KEYSTORE_PATH }} \
             -p:AndroidSigningKeyAlias=${{ secrets.ANDROID_KEY_ALIAS }} \
             -p:AndroidSigningKeyPass=${{ secrets.ANDROID_KEY_PASSWORD }} \
@@ -106,7 +111,12 @@ jobs:
             -p:ApplicationDisplayVersion=${{ inputs.app-display-version }} \
             -p:ApplicationVersion=${{ inputs.app-version-code }} \
             -p:Version=${{ inputs.app-display-version }} \
-            -p:SourceRevisionId=${{ github.sha }}
+            -p:SourceRevisionId=${{ github.sha }} \
+            -p:GitRepository=${{ github.repository }} \
+            -p:GitBranch=${{ github.ref }} \
+            -p:BuildWorkflow='${{ github.workflow }}' \
+            -p:BuildRunId=${{ github.run_id }} \
+            -p:BuildRunNumber=${{ github.run_number }}
 
       - name: Upload to Play Store
         if: inputs.deploy == true

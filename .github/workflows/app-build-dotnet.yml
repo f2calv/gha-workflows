@@ -100,7 +100,12 @@ jobs:
         run: dotnet restore ${{ inputs.solution-name }} --verbosity minimal ${{ inputs.dotnet-restore-args }}
 
       - name: dotnet build
-        run: dotnet build ${{ inputs.solution-name }} -c ${{ inputs.configuration }} --nologo --no-restore -p:Version='${{ inputs.version }}' -p:SourceRevisionId=${{ github.sha }} ${{ inputs.dotnet-build-args }}
+        run: >-
+          dotnet build ${{ inputs.solution-name }} -c ${{ inputs.configuration }} --nologo --no-restore
+          -p:Version='${{ inputs.version }}' -p:SourceRevisionId='${{ github.sha }}'
+          -p:GitRepository='${{ github.repository }}' -p:GitBranch='${{ github.ref }}'
+          -p:BuildWorkflow='${{ github.workflow }}' -p:BuildRunId='${{ github.run_id }}'
+          -p:BuildRunNumber='${{ github.run_number }}' ${{ inputs.dotnet-build-args }}
 
       - name: dotnet restore (test target)
         if: inputs.test-solution-name != '' && inputs.test-solution-name != inputs.solution-name
@@ -108,7 +113,12 @@ jobs:
 
       - name: dotnet build (test target)
         if: inputs.test-solution-name != '' && inputs.test-solution-name != inputs.solution-name
-        run: dotnet build ${{ inputs.test-solution-name }} -c ${{ inputs.configuration }} --no-restore --nologo -p:Version='${{ inputs.version }}' -p:SourceRevisionId=${{ github.sha }} ${{ inputs.dotnet-build-args }}
+        run: >-
+          dotnet build ${{ inputs.test-solution-name }} -c ${{ inputs.configuration }} --no-restore --nologo
+          -p:Version='${{ inputs.version }}' -p:SourceRevisionId='${{ github.sha }}'
+          -p:GitRepository='${{ github.repository }}' -p:GitBranch='${{ github.ref }}'
+          -p:BuildWorkflow='${{ github.workflow }}' -p:BuildRunId='${{ github.run_id }}'
+          -p:BuildRunNumber='${{ github.run_number }}' ${{ inputs.dotnet-build-args }}
 
       - name: configure Docker Compose (test services)
         if: inputs.execute-tests && inputs.test-compose-services != '[]'
