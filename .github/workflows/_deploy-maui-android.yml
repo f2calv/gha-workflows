@@ -88,6 +88,8 @@ jobs:
             -c ${{ inputs.configuration }} \
             -p:ApplicationDisplayVersion=${{ inputs.app-display-version }} \
             -p:ApplicationVersion=${{ inputs.app-version-code }} \
+            -p:Version=${{ inputs.app-display-version }} \
+            -p:SourceRevisionId=${{ github.sha }} \
             -p:AndroidSigningKeyStore=${{ env.KEYSTORE_PATH }} \
             -p:AndroidSigningKeyAlias=${{ secrets.ANDROID_KEY_ALIAS }} \
             -p:AndroidSigningKeyPass=${{ secrets.ANDROID_KEY_PASSWORD }} \
@@ -102,7 +104,9 @@ jobs:
             -f net10.0-android \
             -c ${{ inputs.configuration }} \
             -p:ApplicationDisplayVersion=${{ inputs.app-display-version }} \
-            -p:ApplicationVersion=${{ inputs.app-version-code }}
+            -p:ApplicationVersion=${{ inputs.app-version-code }} \
+            -p:Version=${{ inputs.app-display-version }} \
+            -p:SourceRevisionId=${{ github.sha }}
 
       - name: Upload to Play Store
         if: inputs.deploy == true
