@@ -149,7 +149,7 @@ take precedence; opt out of dry-run only when the caller intends real deletion.
 
 | Workflow | Description | Key Inputs |
 | --- | --- | --- |
-| [Release Versioning](.github/workflows/gha-release-versioning.yml) | Determine a semantic version via GitVersion, tag the repository and create a GitHub release. | `runs-on`, `semVer`, `tag-prefix`, `move-major-tag`, `tag-and-release`, `gv-config`, `gv-source` |
+| [Release Versioning](.github/workflows/gha-release-versioning.yml) | Determine a semantic version via GitVersion, publish its tag and optionally create a GitHub Release. | `runs-on`, `semVer`, `tag-prefix`, `move-major-tag`, `tag-and-release`, `tag-only`, `release-branch`, `gv-config`, `gv-source` |
 
 Release defaults are `semVer: ''`, `tag-prefix: v`, `move-major-tag: true`,
 `tag-and-release: true`, `gv-config: GitVersion.yml`, `gv-source: actions`.
