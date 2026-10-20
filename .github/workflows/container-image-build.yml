@@ -156,6 +156,7 @@ jobs:
               --build-arg GIT_BRANCH=${{ github.ref }} \
               --build-arg GIT_COMMIT=${{ github.sha }} \
               --build-arg GIT_TAG=$TAG \
+              --build-arg VERSION=$TAG \
               --build-arg GITHUB_WORKFLOW="${{ github.workflow }}" \
               --build-arg GITHUB_RUN_ID=${{ github.run_id }} \
               --build-arg GITHUB_RUN_NUMBER=${{ github.run_number }} \
