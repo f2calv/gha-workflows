@@ -100,11 +100,16 @@ jobs:
         run: dotnet restore ${{ inputs.solution-name }} --verbosity minimal ${{ inputs.dotnet-restore-args }}
 
       - name: dotnet build
+        env:
+          #Free-text context values are passed through the environment, never interpolated into the script.
+          GIT_REPOSITORY: ${{ github.repository }}
+          GIT_BRANCH: ${{ github.ref }}
+          BUILD_WORKFLOW: ${{ github.workflow }}
         run: >-
           dotnet build ${{ inputs.solution-name }} -c ${{ inputs.configuration }} --nologo --no-restore
           -p:Version='${{ inputs.version }}' -p:SourceRevisionId='${{ github.sha }}'
-          -p:GitRepository='${{ github.repository }}' -p:GitBranch='${{ github.ref }}'
-          -p:BuildWorkflow='${{ github.workflow }}' -p:BuildRunId='${{ github.run_id }}'
+          -p:GitRepository="$GIT_REPOSITORY" -p:GitBranch="$GIT_BRANCH"
+          -p:BuildWorkflow="$BUILD_WORKFLOW" -p:BuildRunId='${{ github.run_id }}'
           -p:BuildRunNumber='${{ github.run_number }}' ${{ inputs.dotnet-build-args }}
 
       - name: dotnet restore (test target)
@@ -113,11 +118,15 @@ jobs:
 
       - name: dotnet build (test target)
         if: inputs.test-solution-name != '' && inputs.test-solution-name != inputs.solution-name
+        env:
+          GIT_REPOSITORY: ${{ github.repository }}
+          GIT_BRANCH: ${{ github.ref }}
+          BUILD_WORKFLOW: ${{ github.workflow }}
         run: >-
           dotnet build ${{ inputs.test-solution-name }} -c ${{ inputs.configuration }} --no-restore --nologo
           -p:Version='${{ inputs.version }}' -p:SourceRevisionId='${{ github.sha }}'
-          -p:GitRepository='${{ github.repository }}' -p:GitBranch='${{ github.ref }}'
-          -p:BuildWorkflow='${{ github.workflow }}' -p:BuildRunId='${{ github.run_id }}'
+          -p:GitRepository="$GIT_REPOSITORY" -p:GitBranch="$GIT_BRANCH"
+          -p:BuildWorkflow="$BUILD_WORKFLOW" -p:BuildRunId='${{ github.run_id }}'
           -p:BuildRunNumber='${{ github.run_number }}' ${{ inputs.dotnet-build-args }}
 
       - name: configure Docker Compose (test services)

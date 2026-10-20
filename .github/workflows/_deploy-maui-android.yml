@@ -51,6 +51,10 @@ on:
 env:
   PROJECT_PATH: src/CasCap.App.Maui/CasCap.App.Maui.csproj
   KEYSTORE_PATH: /tmp/android.keystore
+  #Free-text context values are passed through the environment, never interpolated into scripts.
+  GIT_REPOSITORY: ${{ github.repository }}
+  GIT_BRANCH: ${{ github.ref }}
+  BUILD_WORKFLOW: ${{ github.workflow }}
 
 jobs:
   build-and-deploy:
@@ -90,9 +94,9 @@ jobs:
             -p:ApplicationVersion=${{ inputs.app-version-code }} \
             -p:Version=${{ inputs.app-display-version }} \
             -p:SourceRevisionId=${{ github.sha }} \
-            -p:GitRepository=${{ github.repository }} \
-            -p:GitBranch=${{ github.ref }} \
-            -p:BuildWorkflow='${{ github.workflow }}' \
+            -p:GitRepository="$GIT_REPOSITORY" \
+            -p:GitBranch="$GIT_BRANCH" \
+            -p:BuildWorkflow="$BUILD_WORKFLOW" \
             -p:BuildRunId=${{ github.run_id }} \
             -p:BuildRunNumber=${{ github.run_number }} \
             -p:AndroidSigningKeyStore=${{ env.KEYSTORE_PATH }} \
@@ -112,9 +116,9 @@ jobs:
             -p:ApplicationVersion=${{ inputs.app-version-code }} \
             -p:Version=${{ inputs.app-display-version }} \
             -p:SourceRevisionId=${{ github.sha }} \
-            -p:GitRepository=${{ github.repository }} \
-            -p:GitBranch=${{ github.ref }} \
-            -p:BuildWorkflow='${{ github.workflow }}' \
+            -p:GitRepository="$GIT_REPOSITORY" \
+            -p:GitBranch="$GIT_BRANCH" \
+            -p:BuildWorkflow="$BUILD_WORKFLOW" \
             -p:BuildRunId=${{ github.run_id }} \
             -p:BuildRunNumber=${{ github.run_number }}
 
