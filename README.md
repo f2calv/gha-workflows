@@ -36,7 +36,7 @@ jobs:
 
 Replace `Example.slnx` with your solution and provide `GitVersion.yml` in the caller. Tests require `global.json` selecting Microsoft.Testing.Platform and compatible test projects. Jobs calling reusable workflows do not also declare `steps` or `runs-on`; override the workflow's `runs-on` input instead. See [GitHub's reusable-workflow guidance](https://docs.github.com/en/actions/using-workflows/reusing-workflows).
 
-The existing published `@v1` reference and immutable [v1.8.8 release](https://github.com/f2calv/gha-workflows/releases/tag/v1.8.8) were verified on 20 October 2026. You may replace `@v1` with `@v1.8.8` to lock that historical workflow implementation. This collection has legacy `v`-prefixed/floating tags; it is not a Marketplace Action. New non-Action releases should use plain immutable `X.Y.Z` tags, but no such replacement tag is asserted here.
+The existing published `@v1` reference and immutable [v1.8.8 release](https://github.com/f2calv/gha-workflows/releases/tag/v1.8.8) were verified on 20 October 2026. You may replace `@v1` with `@v1.8.8` to lock that historical workflow implementation. Although it is not a Marketplace Action, this collection is released like one: immutable `vX.Y.Z` tags plus floating `vMAJOR` and `vMAJOR.MINOR` aliases.
 
 Contracts below describe the current checkout. Compared with `v1.8.8`, it adds build-context properties and removes Helm environment injection; the release wrapper no longer exposes `tag-only` or `release-branch`. Use the [Action directly](https://github.com/f2calv/gha-release-versioning) when those controls are needed.
 
