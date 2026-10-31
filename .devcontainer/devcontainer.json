@@ -16,6 +16,12 @@
     "ghcr.io/eitsupi/devcontainer-features/jq-likes:2": {
       "jqVersion": "latest",
       "yqVersion": "latest"
+    },
+    //helm-chart-package.yml reads this pinned helm version when CI packages the fixture chart.
+    "ghcr.io/devcontainers/features/kubectl-helm-minikube:1": {
+      "version": "none",
+      "helm": "3.20.2",
+      "minikube": "none"
     }
   },
   // Use 'forwardPorts' to make a list of ports inside the container available locally.

@@ -83,12 +83,32 @@ on:
         description: Platform the smoke test image is built for e.g. linux/amd64
         default: linux/amd64
 
+permissions: {}
+
 jobs:
   container-image-build:
     runs-on: ${{ inputs.runs-on }}
     if: github.actor != 'dependabot[bot]'
-    #https://github.blog/changelog/2021-04-20-github-actions-control-permissions-for-github_token/
-    #https://docs.github.com/en/actions/using-jobs/assigning-permissions-to-jobs
+    permissions:
+      contents: read
+      packages: write
+    #Inputs are free text, so scripts only ever read them as quoted environment variables. Values the
+    #set vars step normalises arrive as IN_*, because job env would override a same-named GITHUB_ENV value.
+    env:
+      IN_REGISTRY: ${{ inputs.registry }}
+      IN_REPOSITORY: ${{ inputs.repository }}
+      IN_REPOSITORY_PREFIX: ${{ inputs.repository-prefix }}
+      IN_TAG: ${{ inputs.tag }}
+      IN_DEFAULT_BRANCH_TAG: ${{ inputs.default-branch-tag }}
+      IN_FEATURE_BRANCH_TAG: ${{ inputs.feature-branch-tag }}
+      DOCKERFILE: ${{ inputs.dockerfile }}
+      PLATFORM: ${{ inputs.platform }}
+      BUILD_ARGS: ${{ inputs.args }}
+      DEFAULT_BRANCH: ${{ inputs.default-branch }}
+      PUSH_IMAGE: ${{ inputs.push-image }}
+      ATTESTATIONS: ${{ inputs.attestations }}
+      SMOKE_TEST: ${{ inputs.smoke-test }}
+      SMOKE_TEST_PLATFORM: ${{ inputs.smoke-test-platform }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -110,80 +130,94 @@ jobs:
           done
 
       - name: github private packages auth
-        if: inputs.github-private-packages-auth == true
+        if: inputs.github-private-packages-auth
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           dotnet nuget remove source github
-          dotnet nuget add source --username ${{ github.actor }} --password ${{ secrets.GITHUB_TOKEN }} --store-password-in-clear-text --name github "https://nuget.pkg.github.com/${{ github.actor }}/index.json" --configfile NuGet.config
+          dotnet nuget add source --username "$GITHUB_ACTOR" --password "$GH_TOKEN" --store-password-in-clear-text \
+            --name github "https://nuget.pkg.github.com/$GITHUB_ACTOR/index.json" --configfile NuGet.config
 
       - name: set vars
-        id: setupvars
         run: |
-          REPOSITORY=${{ inputs.repository }}
+          set -euo pipefail
+          fail() { echo "::error::$1"; exit 1; }
+          require() { [[ "$2" =~ $3 ]] || fail "$1 '$2' is invalid."; }
 
+          REPOSITORY="$IN_REPOSITORY"
           if [[ -z "$REPOSITORY" ]]; then
-            #set the repository to the current gh repository, then strip the repository_owner away
-            REPOSITORY=${{ github.repository }}
-            REPOSITORY=$(echo $REPOSITORY | sed "s|${{ github.repository_owner }}\/||g")
+            #The current repository name without its owner.
+            REPOSITORY="${GITHUB_REPOSITORY#"$GITHUB_REPOSITORY_OWNER"/}"
           fi
-          #lowercase
-          REPOSITORY=${REPOSITORY,,}
           IMAGE_NAME=${REPOSITORY,,}
+          REPOSITORY="${IN_REPOSITORY_PREFIX,,}${REPOSITORY,,}"
+          REGISTRY=${IN_REGISTRY,,}
+          TAG=${IN_TAG,,}
+          if [[ "$GITHUB_REF" == "$DEFAULT_BRANCH" ]]; then
+            ADDITIONAL_TAG=${IN_DEFAULT_BRANCH_TAG,,}
+          else
+            ADDITIONAL_TAG=${IN_FEATURE_BRANCH_TAG,,}
+          fi
 
-          echo "IMAGE_NAME=$IMAGE_NAME" >> $GITHUB_ENV
-          echo "REPOSITORY=${{ inputs.repository-prefix }}$REPOSITORY" >> $GITHUB_ENV
+          OCI_PATTERN='^[a-z0-9][a-z0-9._:/-]*$'
+          TAG_PATTERN='^[a-z0-9_][a-z0-9_.+-]*$'
+          require registry "$REGISTRY" "$OCI_PATTERN"
+          require repository "$REPOSITORY" "$OCI_PATTERN"
+          require tag "$TAG" "$TAG_PATTERN"
+          require "branch alias tag" "$ADDITIONAL_TAG" "$TAG_PATTERN"
+          require dockerfile "$DOCKERFILE" '^[A-Za-z0-9._/-]+$'
+          require platform "$PLATFORM" '^[a-z0-9/,._-]+$'
+          require smoke-test-platform "$SMOKE_TEST_PLATFORM" '^[a-z0-9/._-]+$'
 
-          TAG=${{ inputs.tag }}
-          TAG=${TAG,,}
-          echo "TAG=$TAG" >> $GITHUB_ENV
-          echo "REGISTRY=${{ inputs.registry }}" >> $GITHUB_ENV
+          {
+            echo "REGISTRY=$REGISTRY"
+            echo "REPOSITORY=$REPOSITORY"
+            echo "IMAGE_NAME=$IMAGE_NAME"
+            echo "TAG=$TAG"
+            echo "ADDITIONAL_TAG=$ADDITIONAL_TAG"
+          } >> "$GITHUB_ENV"
 
-      - name: docker login ${{ inputs.registry }}
-        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login $REGISTRY -u ${{ github.actor }} --password-stdin
+      - name: docker login
+        env:
+          REGISTRY_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: docker login "$REGISTRY" -u "$GITHUB_ACTOR" --password-stdin <<< "$REGISTRY_TOKEN"
 
       - name: docker buildx build/push
-        id: build
+        env:
+          BUILDX_NO_DEFAULT_ATTESTATIONS: 1 #Note: fixes publishing container architecture 'unknown/unknown'
         run: |
+          set -euo pipefail
           docker buildx create --name multiarchtest --use
 
           #every build shares these, and the smoke test image must match what is published
           build() {
             docker buildx build \
-              -f "${{ inputs.dockerfile }}" \
-              --label "GITHUB_RUN_ID=${{ github.run_id }}" \
+              -f "$DOCKERFILE" \
+              --label "GITHUB_RUN_ID=$GITHUB_RUN_ID" \
               --label "IMAGE_NAME=$IMAGE_NAME" \
-              --label "org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}" \
-              --build-arg GIT_REPOSITORY=${{ github.repository }} \
-              --build-arg GIT_BRANCH=${{ github.ref }} \
-              --build-arg GIT_COMMIT=${{ github.sha }} \
-              --build-arg GIT_TAG=$TAG \
-              --build-arg VERSION=$TAG \
-              --build-arg GITHUB_WORKFLOW="${{ github.workflow }}" \
-              --build-arg GITHUB_RUN_ID=${{ github.run_id }} \
-              --build-arg GITHUB_RUN_NUMBER=${{ github.run_number }} \
+              --label "org.opencontainers.image.source=$GITHUB_SERVER_URL/$GITHUB_REPOSITORY" \
+              --build-arg "GIT_REPOSITORY=$GITHUB_REPOSITORY" \
+              --build-arg "GIT_BRANCH=$GITHUB_REF" \
+              --build-arg "GIT_COMMIT=$GITHUB_SHA" \
+              --build-arg "GIT_TAG=$TAG" \
+              --build-arg "VERSION=$TAG" \
+              --build-arg "GITHUB_WORKFLOW=$GITHUB_WORKFLOW" \
+              --build-arg "GITHUB_RUN_ID=$GITHUB_RUN_ID" \
+              --build-arg "GITHUB_RUN_NUMBER=$GITHUB_RUN_NUMBER" \
               --pull \
               "$@" \
               .
           }
 
-          TAGS=()
-          TAGS+=(-t "$REGISTRY/$REPOSITORY:$TAG")
-          if [[ "${{ github.ref }}" == "${{ inputs.default-branch }}" ]]; then
-            ADDITIONAL_TAG=${{ inputs.default-branch-tag }}
-          else
-            ADDITIONAL_TAG=${{ inputs.feature-branch-tag }}
-          fi
-          ADDITIONAL_TAG=${ADDITIONAL_TAG,,}
-          TAGS+=(-t "$REGISTRY/$REPOSITORY:$ADDITIONAL_TAG")
+          TAGS=(-t "$REGISTRY/$REPOSITORY:$TAG" -t "$REGISTRY/$REPOSITORY:$ADDITIONAL_TAG")
 
-          ARGS=()
-          if [[ ! -z "${{ inputs.args }}" ]]; then
-            ARGS+=(${{ inputs.args }})
-          fi
+          #Split on whitespace only: no globbing, quote parsing or expansion of caller text.
+          read -r -d '' -a ARGS <<< "$BUILD_ARGS" || true
 
           PUSH_ARGS=()
-          if [[ "${{ inputs.push-image }}" == "true" ]]; then
+          if [[ "$PUSH_IMAGE" == "true" ]]; then
             PUSH_ARGS+=(--push)
-            if [[ "${{ inputs.attestations }}" == "true" ]]; then
+            if [[ "$ATTESTATIONS" == "true" ]]; then
               PUSH_ARGS+=(--provenance=mode=max --sbom=true)
             fi
           fi
@@ -194,16 +228,16 @@ jobs:
           echo "TAGS=${TAGS[*]}"
           echo "ARGS=${ARGS[*]}"
           echo "PUSH_ARGS=${PUSH_ARGS[*]}"
-          echo "DockerFile=${{ inputs.dockerfile }}"
+          echo "DockerFile=$DOCKERFILE"
 
           if [[ -n "$SMOKE_TEST" ]]; then
             IMAGE="$IMAGE_NAME:smoke-test"
 
-            echo "::group::docker buildx build --load --platform ${{ inputs.smoke-test-platform }}"
+            echo "::group::docker buildx build --load --platform $SMOKE_TEST_PLATFORM"
             #the caller's args must be passed here too, or the smoke test runs against a different
             #image than the one published, and the build below misses the cache on every layer after
             #the first differing build-arg
-            build --load --platform ${{ inputs.smoke-test-platform }} -t "$IMAGE" "${ARGS[@]}"
+            build --load --platform "$SMOKE_TEST_PLATFORM" -t "$IMAGE" "${ARGS[@]}"
             echo "::endgroup::"
 
             echo "::group::smoke test"
@@ -212,7 +246,4 @@ jobs:
           fi
 
           #reuses the builder above, so the smoke test platform is already cached rather than rebuilt
-          build "${TAGS[@]}" --platform ${{ inputs.platform }} "${ARGS[@]}" "${PUSH_ARGS[@]}"
-        env:
-          BUILDX_NO_DEFAULT_ATTESTATIONS: 1 #Note: fixes publishing container architecture 'unknown/unknown'
-          SMOKE_TEST: ${{ inputs.smoke-test }}
+          build "${TAGS[@]}" --platform "$PLATFORM" "${ARGS[@]}" "${PUSH_ARGS[@]}"
