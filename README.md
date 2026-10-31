@@ -47,7 +47,7 @@ Contracts below describe the current checkout. Compared with `v1.8.8`, it adds b
 | Workflow | Description | Key Inputs |
 | --- | --- | --- |
 | [App Build .NET](.github/workflows/app-build-dotnet.yml) | Restore, workload restore, build and test a .NET solution/project. Installs .NET 8/9/10 SDKs. Optionally collects coverage, provisions selected Compose services and clones extra repositories into the build context. | `version` (required), `runs-on`, `solution-name`, `configuration`, `execute-tests`, `test-solution-name`, `dotnet-restore-args`, `dotnet-build-args`, `dotnet-test-args`, `collect-coverage`, `coverage-artifact-name`, `test-compose-file`, `test-compose-services`, `extra-repos` |
-| [App Build Go](.github/workflows/app-build-go.yml) | Check formatting and modules, run `go vet`, staticcheck, build and test a Go module. The toolchain version comes from `go.mod`. | `version` (required), `runs-on`, `go-version-file`, `package`, `ldflags` |
+| [App Build Go](.github/workflows/app-build-go.yml) | Check formatting and modules, run `go vet`, staticcheck, build and test a Go module. The toolchain version comes from `go.mod`. | `version` (required), `runs-on`, `go-version-file`, `working-directory`, `package`, `ldflags` |
 | [App Build Python](.github/workflows/app-build-python.yml) | Validate the uv lockfile, restore all dependency groups, run Ruff, mypy and pytest, then build the Python package. Its required `version` input is currently unused. | `version` (required), `runs-on` |
 | [App Build Rust](.github/workflows/app-build-rust.yml) | Check formatting, run Clippy, fetch dependencies and build a Rust project; does not run Cargo tests or inject its required `version`. | `version` (required), `runs-on` |
 
@@ -70,7 +70,7 @@ An extra .NET test target is restored and built separately. Coverage requires th
 test projects to reference `Microsoft.Testing.Extensions.CodeCoverage`; the workflow uploads
 `TestResults/**/*.xml` with one-day retention and fails if no matching files exist.
 
-Go uses `go.mod` by default, `package: ./...`, `ldflags: ''`, injects `main.version`,
+Go uses `go.mod` by default, `working-directory: .`, `package: ./...`, `ldflags: ''`, injects `main.version`,
 and runs race-enabled tests. Python expects a locked uv project containing Ruff, mypy and pytest.
 Rust expects Cargo/rustfmt/Clippy on the selected runner; it installs no toolchain.
 
@@ -412,9 +412,21 @@ fixtures in [tests/fixtures](tests/fixtures), before a release moves the floatin
 | `app-build-dotnet.yml` | .NET library and xUnit v3 tests | Restore, build, Microsoft.Testing.Platform tests and coverage upload |
 | `container-image-build.yml` | Minimal multi-architecture image | Default platforms and the smoke test; never pushed |
 | `helm-chart-package.yml` | Chart that owns an image value | Image rewriting, packaging and `ct lint`; never pushed |
+| `app-build-go.yml` | Go module outside the repository root | `working-directory`, vet, staticcheck, build and race tests |
+| `terraform.yml` | Root module with one output | Backend-free `validate` and `fmt` |
+| `ef-migrations-drift.yml` | Model-less EF Core context with a design-time factory | Tool restore and the pending-model-changes check |
+| `clone-extra-repos` action | Two public repositories | Ref and default-branch clones without persisted credentials |
 
-The root `global.json` and the Helm version in `.devcontainer/devcontainer.json` exist for these
-fixtures, matching what the workflows require from a caller.
+The root `global.json`, `.config/dotnet-tools.json` and the Helm version in
+`.devcontainer/devcontainer.json` exist for these fixtures, matching what the workflows require
+from a caller.
+
+## Composite Actions
+
+[clone-extra-repos](.github/actions/clone-extra-repos/action.yml) shallow-clones the repositories
+in an `extra-repos` JSON array. Its token is sent as a per-command header, so it never reaches a
+remote URL or `.git/config` that a container build context could copy. An omitted `ref` clones the
+default branch.
 
 ## Companion Actions
 

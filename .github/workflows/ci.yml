@@ -88,9 +88,63 @@ jobs:
       contents: read
       packages: write
 
+  test-go:
+    needs: versioning
+    uses: ./.github/workflows/app-build-go.yml
+    with:
+      version: ${{ needs.versioning.outputs.version }}
+      go-version-file: tests/fixtures/go/go.mod
+      working-directory: tests/fixtures/go
+    permissions:
+      contents: read
+
+  test-terraform:
+    uses: ./.github/workflows/terraform.yml
+    with:
+      command: validate
+      working-directory: tests/fixtures/terraform
+      azure-login: false
+    permissions:
+      contents: read
+      id-token: write
+
+  test-ef-drift:
+    uses: ./.github/workflows/ef-migrations-drift.yml
+    with:
+      project: tests/fixtures/dotnet/src/Fixture.Data/Fixture.Data.csproj
+    permissions:
+      contents: read
+
+  #The composite action is referenced locally here; reusable workflows can only reach it by a published ref.
+  test-clone-extra-repos:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 1
+
+      - uses: ./.github/actions/clone-extra-repos
+        with:
+          repos: >-
+            [{"repo":"f2calv/gha-check-release-exists","ref":"main","path":"deps/with-ref"},
+            {"repo":"f2calv/gha-release-versioning","path":"deps/default-branch"}]
+
+      - name: assert clones exist without persisted credentials
+        run: |
+          set -euo pipefail
+          for dir in deps/with-ref deps/default-branch; do
+            test -f "$dir/action.yml"
+            if git -C "$dir" config --list | grep -qi -e extraheader -e x-access-token; then
+              echo "::error::$dir persisted credentials in .git/config"
+              exit 1
+            fi
+          done
+
   release:
     if: github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
-    needs: [lint, versioning, validate, test-dotnet, test-container, test-helm]
+    needs: [lint, versioning, validate, test-dotnet, test-container, test-helm, test-go, test-terraform, test-ef-drift, test-clone-extra-repos]
     uses: ./.github/workflows/gha-release-versioning.yml
     with:
       semVer: ${{ format('{0}.{1}.{2}', needs.versioning.outputs.major, needs.versioning.outputs.minor, needs.versioning.outputs.patch) }}
