@@ -9,18 +9,18 @@ on:
         default: ubuntu-24.04
       tag:
         type: string
-        description: e.g. 1.2.3
+        description: Chart version e.g. 1.2.3
         required: true
       tag-override:
         type: string
-        description: e.g. latest, latest-dev
+        description: Image tag override e.g. latest-dev
       image-registry:
         type: string
         description: e.g. ghcr.io, xyz.azurecr.io or docker.io
         required: true
       image-repository:
         type: string
-        description: Name of the image.
+        description: Image repository e.g. owner/my-app
         required: true
       chart-registry:
         type: string
@@ -28,15 +28,16 @@ on:
         required: true
       chart-registry-username:
         type: string
-      chart-registry-password:
-        type: string
+        description: Chart registry username e.g. github.repository_owner
+      #The chart is pushed to dirname(chart-repository); its final segment must equal the chart name.
       chart-repository:
         type: string
-        description: If unset we use the name of the current Git repository.
+        description: Full OCI chart coordinate e.g. owner/charts/my-app
         required: true
+      #The basename must equal the Chart.yaml name and the final segment of chart-repository.
       chart-path:
         type: string
-        description: Relative path to the charts folder in the Git repository.
+        description: Chart directory e.g. charts/my-app
         default: ./charts/
       is-library-chart:
         type: boolean
@@ -52,24 +53,104 @@ on:
         default: true
       push-chart:
         type: boolean
-        description: By default always push the newly packaged chart.
+        description: Push the packaged chart.
         default: true
+      #chart-testing publishes no major-version alias, so pin the full release.
       chart-testing-cli-version:
         type: string
-        description: See https://quay.io/repository/helmpack/chart-testing?tab=tags
-        default: latest
+        description: chart-testing image tag e.g. v3.15.0
+        default: v3.15.0
+      #skip relies on the helm lint run during packaging.
       chart-testing-cli-command:
         type: string
-        description: Accepts lint or install. Default is lint.
+        description: lint, install or skip
         default: lint
       chart-dependency-name:
         type: string
-        description: The name of the local chart dependency that should be updated.
+        description: Local chart dependency to version with tag.
+
+permissions: {}
 
 jobs:
   helm-chart-package:
     runs-on: ${{ inputs.runs-on }}
+    permissions:
+      contents: read
+      packages: write
+    #Inputs are free text, so scripts only ever read them as quoted environment variables.
+    env:
+      TAG: ${{ inputs.tag }}
+      TAG_OVERRIDE: ${{ inputs.tag-override }}
+      IMAGE_REGISTRY: ${{ inputs.image-registry }}
+      IMAGE_REPOSITORY: ${{ inputs.image-repository }}
+      CHART_REGISTRY: ${{ inputs.chart-registry }}
+      CHART_REGISTRY_USERNAME: ${{ inputs.chart-registry-username }}
+      CHART_REPOSITORY: ${{ inputs.chart-repository }}
+      CHART_PATH: ${{ inputs.chart-path }}
+      CHART_DEPENDENCY: ${{ inputs.chart-dependency-name }}
+      IS_LIBRARY_CHART: ${{ inputs.is-library-chart }}
+      SET_CHART_APP_VERSION: ${{ inputs.set-chart-app-version }}
+      HAS_IMAGE: ${{ inputs.has-image }}
+      PUSH_CHART: ${{ inputs.push-chart }}
+      CHART_TESTING_CLI_VERSION: ${{ inputs.chart-testing-cli-version }}
+      CHART_TESTING_CLI_COMMAND: ${{ inputs.chart-testing-cli-command }}
+      ARTIFACTS_PATH: ${{ github.workspace }}/artifacts
     steps:
+      - name: validate inputs
+        run: |
+          set -euo pipefail
+          fail() { echo "::error::$1"; exit 1; }
+          require() { [[ "$2" =~ $3 ]] || fail "$1 '$2' is invalid."; }
+
+          #Lowercase OCI coordinates before validation; values never reach GITHUB_ENV unvalidated.
+          IMAGE_REGISTRY=${IMAGE_REGISTRY,,}
+          IMAGE_REPOSITORY=${IMAGE_REPOSITORY,,}
+          CHART_REGISTRY=${CHART_REGISTRY,,}
+          CHART_REPOSITORY=${CHART_REPOSITORY,,}
+
+          VERSION_PATTERN='^[0-9A-Za-z][0-9A-Za-z._+-]*$'
+          OCI_PATTERN='^[a-z0-9][a-z0-9._:/-]*$'
+          require tag "$TAG" "$VERSION_PATTERN"
+          [[ -z "$TAG_OVERRIDE" ]] || require tag-override "$TAG_OVERRIDE" "$VERSION_PATTERN"
+          require image-registry "$IMAGE_REGISTRY" "$OCI_PATTERN"
+          require image-repository "$IMAGE_REPOSITORY" "$OCI_PATTERN"
+          require chart-registry "$CHART_REGISTRY" "$OCI_PATTERN"
+          require chart-repository "$CHART_REPOSITORY" "$OCI_PATTERN"
+          require chart-path "$CHART_PATH" '^[A-Za-z0-9._/-]+$'
+          [[ -z "$CHART_DEPENDENCY" ]] || require chart-dependency-name "$CHART_DEPENDENCY" '^[A-Za-z0-9._-]+$'
+          [[ -z "$CHART_REGISTRY_USERNAME" ]] || require chart-registry-username "$CHART_REGISTRY_USERNAME" '^[A-Za-z0-9._-]+$'
+          require chart-testing-cli-version "$CHART_TESTING_CLI_VERSION" '^[A-Za-z0-9._-]+$'
+          case "$CHART_TESTING_CLI_COMMAND" in
+            lint | install | skip) ;;
+            *) fail "chart-testing-cli-command must be lint, install or skip." ;;
+          esac
+
+          IMAGE_PREFIX="$IMAGE_REGISTRY/$IMAGE_REPOSITORY"
+          IMAGE_TAG="${TAG_OVERRIDE:-$TAG}"
+          CHART_NAME=$(basename "$CHART_PATH")
+          CHART_REPOSITORY_PREFIX=$(dirname "$CHART_REPOSITORY")
+
+          LABEL="$IMAGE_REPOSITORY-$IMAGE_TAG"
+          if [[ "${#LABEL}" -gt 63 ]]; then
+            fail "RFC 1123 label '$LABEL' exceeds 63 characters; shorten the repository or branch name."
+          fi
+
+          {
+            echo "IMAGE_REGISTRY=$IMAGE_REGISTRY"
+            echo "IMAGE_REPOSITORY=$IMAGE_REPOSITORY"
+            echo "CHART_REGISTRY=$CHART_REGISTRY"
+            echo "CHART_REPOSITORY=$CHART_REPOSITORY"
+            echo "IMAGE_PREFIX=$IMAGE_PREFIX"
+            echo "IMAGE_TAG=$IMAGE_TAG"
+            echo "CHART_NAME=$CHART_NAME"
+            echo "CHART_REPOSITORY_PREFIX=$CHART_REPOSITORY_PREFIX"
+          } >> "$GITHUB_ENV"
+
+          printf '%s=%s\n' \
+            TAG "$TAG" IMAGE_PREFIX "$IMAGE_PREFIX" IMAGE_TAG "$IMAGE_TAG" \
+            CHART_REGISTRY "$CHART_REGISTRY" CHART_REPOSITORY "$CHART_REPOSITORY" \
+            CHART_PATH "$CHART_PATH" CHART_NAME "$CHART_NAME" CHART_DEPENDENCY "$CHART_DEPENDENCY"
+
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
@@ -80,7 +161,7 @@ jobs:
           if [[ -f "$FILE" ]]; then
             echo "$FILE exists"
           else
-            echo "::error file=.devcontainer/devcontainer.json::helm version is managed by the devcontainer.json, '$FILE' is therefore required!"
+            echo "::error file=$FILE::helm version is managed by the devcontainer.json, '$FILE' is therefore required!"
             exit 1
           fi
 
@@ -88,9 +169,9 @@ jobs:
         run: |
           npm install --global json5
           json5 -c .devcontainer/devcontainer.json
-          VERSION_TO_INSTALL=$(cat .devcontainer/devcontainer.json | jq -r '.features[] | select(.helm | . != null).helm')
+          VERSION_TO_INSTALL=$(jq -r '.features[] | select(.helm | . != null).helm' .devcontainer/devcontainer.json)
           git restore .devcontainer/devcontainer.json
-          echo "VERSION_TO_INSTALL=$VERSION_TO_INSTALL" >> $GITHUB_ENV
+          echo "VERSION_TO_INSTALL=$VERSION_TO_INSTALL" >> "$GITHUB_ENV"
           echo "VERSION_TO_INSTALL=$VERSION_TO_INSTALL"
 
       - name: setup helm (3 of 3)
@@ -98,174 +179,90 @@ jobs:
         with:
           version: ${{ env.VERSION_TO_INSTALL }}
 
+      - name: helm registry login
+        env:
+          REGISTRY_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          helm registry login "$CHART_REGISTRY/$CHART_REPOSITORY" \
+            --username "$CHART_REGISTRY_USERNAME" --password-stdin <<< "$REGISTRY_TOKEN"
+
       - name: helm build/lint/package
         run: |
-          #force to lowercase
-          IMAGE_REGISTRY=${{ inputs.image-registry }}
-          IMAGE_REGISTRY=${IMAGE_REGISTRY,,}
-          IMAGE_REPOSITORY=${{ inputs.image-repository }}
-          IMAGE_REPOSITORY=${IMAGE_REPOSITORY,,}
-          CHART_REGISTRY=${{ inputs.chart-registry }}
-          CHART_REGISTRY=${CHART_REGISTRY,,}
-          CHART_REPOSITORY=${{ inputs.chart-repository }}
-          CHART_REPOSITORY=${CHART_REPOSITORY,,}
-
-          export TAG=${{ inputs.tag }}                                                      # e.g. 1.2.3
-          export TAG_OVERRIDE=${{ inputs.tag-override }}                                    # e.g. latest, latest-dev
-          export IMAGE_REGISTRY=$IMAGE_REGISTRY                                             # e.g. ghcr.io
-          export IMAGE_REPOSITORY=$IMAGE_REPOSITORY                                         # e.g. username/imagename
-          export CHART_REGISTRY=$CHART_REGISTRY                                             # e.g. ghcr.io
-          export CHART_REGISTRY_USERNAME=${{ inputs.chart-registry-username }}              # e.g. username
-          export CHART_REGISTRY_PASSWORD=${{ secrets.GITHUB_TOKEN }}                        # its a secret!
-          export CHART_REPOSITORY=$CHART_REPOSITORY                                         # e.g. f2calv/xyz/charts/myapp
-          export CHART_PATH=${{ inputs.chart-path }}
-          export CHART_DEPENDENCY=${{ inputs.chart-dependency-name }}
-
-          #custom variables derived from inputs
-          export IMAGE_PREFIX=$IMAGE_REGISTRY/$IMAGE_REPOSITORY                             # e.g. ghcr.io/username/imagename
-          if [[ -z "$TAG_OVERRIDE" ]]; then
-            export IMAGE=$IMAGE_PREFIX:$TAG                                                 # e.g. ghcr.io/username/imagename:1.2.3
-            LABEL=$IMAGE_REPOSITORY-$TAG                                                    # e.g. username/imagename:1.2.3
-          else
-            export IMAGE=$IMAGE_PREFIX:$TAG_OVERRIDE                                        # e.g. ghcr.io/username/imagename:latest-dev
-            LABEL=$IMAGE_REPOSITORY-$TAG                                                    # e.g. username/imagename:latest-dev
-          fi
-          export CHART_NAME=$(basename $CHART_PATH)
-          export CHART_REPOSITORY_PREFIX=$(dirname $CHART_REPOSITORY)
-
-          printf "\nTAG=$TAG"
-          printf "\nTAG_OVERRIDE=$TAG_OVERRIDE"
-          printf "\nIMAGE_REGISTRY=$IMAGE_REGISTRY"
-          printf "\nIMAGE_REPOSITORY=$IMAGE_REPOSITORY"
-          printf "\nCHART_REGISTRY=$CHART_REGISTRY"
-          printf "\nCHART_REPOSITORY=$CHART_REPOSITORY"
-          printf "\nCHART_PATH=$CHART_PATH"
-          printf "\nCHART_DEPENDENCY=$CHART_DEPENDENCY"
-
-          printf "\nIMAGE_PREFIX=$IMAGE_PREFIX"
-          printf "\nIMAGE=$IMAGE"
-          printf "\nCHART_NAME=$CHART_NAME"
-          printf "\nCHART_REPOSITORY_PREFIX=$CHART_REPOSITORY_PREFIX"
-
-          printf "\nCHART_REGISTRY=$CHART_REGISTRY" >> $GITHUB_ENV
-          printf "\nCHART_REPOSITORY_PREFIX=$CHART_REPOSITORY_PREFIX" >> $GITHUB_ENV
-          printf "\nCHART_NAME=$CHART_NAME" >> $GITHUB_ENV
-          printf "\nCHART_PATH=$CHART_PATH" >> $GITHUB_ENV
-          printf "\nTAG=$TAG" >> $GITHUB_ENV
-
-          if [[ "${#LABEL}" -gt 63 ]]; then
-            echo "::error::RFC 1123 Label Names maximum length of 63 characters reached for '$LABEL', suggest shortening your repository or branch name."
-            exit 1
-          fi
-
-          printf "\n\n>helm version\n"
+          set -euo pipefail
           helm version
 
-          printf "\n\n>$CHART_REGISTRY_PASSWORD | helm registry login $CHART_REGISTRY/$CHART_REPOSITORY --username $CHART_REGISTRY_USERNAME --password-stdin\n"
-          printf $CHART_REGISTRY_PASSWORD | helm registry login $CHART_REGISTRY/$CHART_REPOSITORY --username $CHART_REGISTRY_USERNAME --password-stdin
-          #printf $servicePrincipalKey | helm registry login $CHART_REGISTRY --username $servicePrincipalId --password-stdin
-
-          printf "\n\nUpdate the local chart dependencies in the Chart.yaml\n"
-          if [[ ! -z "$CHART_DEPENDENCY" ]]; then
-            yq -i '(.dependencies.[] | select(.name == env(CHART_DEPENDENCY)) | .version) = env(TAG)' $CHART_PATH/Chart.yaml
-            export DEPENDENCY_REPOSITORY=oci://$CHART_REGISTRY/$CHART_REPOSITORY_PREFIX
-            printf "\nDEPENDENCY_REPOSITORY=$DEPENDENCY_REPOSITORY"
-            yq -i '(.dependencies.[] | select(.name == env(CHART_DEPENDENCY)) | .repository) = env(DEPENDENCY_REPOSITORY)' $CHART_PATH/Chart.yaml
+          if [[ -n "$CHART_DEPENDENCY" ]]; then
+            echo "Update the local chart dependency in Chart.yaml"
+            export DEPENDENCY_REPOSITORY="oci://$CHART_REGISTRY/$CHART_REPOSITORY_PREFIX"
+            echo "DEPENDENCY_REPOSITORY=$DEPENDENCY_REPOSITORY"
+            yq -i '(.dependencies.[] | select(.name == env(CHART_DEPENDENCY)) | .version) = env(TAG)' "$CHART_PATH/Chart.yaml"
+            yq -i '(.dependencies.[] | select(.name == env(CHART_DEPENDENCY)) | .repository) = env(DEPENDENCY_REPOSITORY)' "$CHART_PATH/Chart.yaml"
           fi
 
-          printf "\n\nUpdate the version in the Chart.yaml\n"
-          yq -i '.version = env(TAG)' $CHART_PATH/Chart.yaml
-          if [[ "${{ inputs.set-chart-app-version }}" == "true" ]]; then
-            printf "\nUpdate the appVersion in the Chart.yaml\n"
-            yq -i '.appVersion = env(TAG)' $CHART_PATH/Chart.yaml
+          yq -i '.version = env(TAG)' "$CHART_PATH/Chart.yaml"
+          if [[ "$SET_CHART_APP_VERSION" == "true" ]]; then
+            yq -i '.appVersion = env(TAG)' "$CHART_PATH/Chart.yaml"
           fi
-          cat $CHART_PATH/Chart.yaml
+          cat "$CHART_PATH/Chart.yaml"
 
-          if [[ "${{ inputs.is-library-chart }}" == "false" && "${{ inputs.has-image }}" == "true" ]]; then
-            printf "\n\nUpdate the repository in the values.yaml\n"
-            yq -i '.image.repository = env(IMAGE_PREFIX)' $CHART_PATH/values.yaml
-            if [[ -z "$TAG_OVERRIDE" ]]; then
-              yq -i '.image.tag = env(TAG)' $CHART_PATH/values.yaml
-            else
-              yq -i '.image.tag = env(TAG_OVERRIDE)' $CHART_PATH/values.yaml
-            fi
-
-            cat $CHART_PATH/values.yaml
+          if [[ "$IS_LIBRARY_CHART" == "false" && "$HAS_IMAGE" == "true" ]]; then
+            yq -i '.image.repository = env(IMAGE_PREFIX)' "$CHART_PATH/values.yaml"
+            yq -i '.image.tag = env(IMAGE_TAG)' "$CHART_PATH/values.yaml"
+            cat "$CHART_PATH/values.yaml"
           fi
 
-          #Note: when pulling library charts from private ghcr packages feeds you need to give the pulling repository permission to pull the package
+          #Pulling a library chart from a private ghcr package requires granting this repository access to it.
           #https://helm.sh/docs/helm/helm_dependency_update/
-          printf "\n\n>helm dependency update $CHART_PATH\n"
-          helm dependency update $CHART_PATH
+          helm dependency update "$CHART_PATH"
+          helm dependency list "$CHART_PATH"
+          helm lint "$CHART_PATH"
 
-          #https://helm.sh/docs/helm/helm_dependency_list/
-          printf "\n\n>helm dependency list $CHART_PATH\n"
-          helm dependency list $CHART_PATH
-
-          #https://helm.sh/docs/helm/helm_lint/
-          printf "\n\n>helm lint $CHART_PATH\n"
-          helm lint $CHART_PATH
-
-          if [[ "${{ inputs.is-library-chart }}" == "false" ]]; then
-            #https://helm.sh/docs/helm/helm_package/
-            PACKAGE_ARGS=(--destination ${{ github.workspace }}/artifacts/ --version $TAG)
-            if [[ "${{ inputs.set-chart-app-version }}" == "true" ]]; then
-              PACKAGE_ARGS+=(--app-version $TAG)
-            fi
-            printf "\n\n>helm package $CHART_PATH ${PACKAGE_ARGS[*]}\n"
-            helm package $CHART_PATH "${PACKAGE_ARGS[@]}"
-
-            #https://helm.sh/docs/helm/helm_template/
-            printf "\n\n>helm template $CHART_NAME $CHART_PATH > ${{ github.workspace }}/artifacts/$CHART_NAME.yaml\n"
-            helm template $CHART_NAME $CHART_PATH > ${{ github.workspace }}/artifacts/$CHART_NAME.yaml
-            cat ${{ github.workspace }}/artifacts/$CHART_NAME.yaml
-          else
-            #https://helm.sh/docs/helm/helm_package/
-            printf "\n\n>helm package $CHART_PATH --destination ${{ github.workspace }}/artifacts/ --version $TAG\n"
-            helm package $CHART_PATH --destination ${{ github.workspace }}/artifacts/ --version $TAG
-
-            printf "\n\nhelm template skipped\n"
+          PACKAGE_ARGS=(--destination "$ARTIFACTS_PATH" --version "$TAG")
+          if [[ "$IS_LIBRARY_CHART" == "false" && "$SET_CHART_APP_VERSION" == "true" ]]; then
+            PACKAGE_ARGS+=(--app-version "$TAG")
           fi
+          helm package "$CHART_PATH" "${PACKAGE_ARGS[@]}"
 
-          printf "\n\nsuccess!"
+          if [[ "$IS_LIBRARY_CHART" == "false" ]]; then
+            helm template "$CHART_NAME" "$CHART_PATH" > "$ARTIFACTS_PATH/$CHART_NAME.yaml"
+            cat "$ARTIFACTS_PATH/$CHART_NAME.yaml"
+          else
+            echo "helm template skipped for a library chart"
+          fi
 
       - uses: helm/kind-action@v1
-        if: inputs.chart-testing-cli-command == 'install' && inputs.is-library-chart == false
+        if: inputs.chart-testing-cli-command == 'install' && !inputs.is-library-chart
 
       #https://github.com/helm/chart-testing/blob/main/doc/ct_lint.md
       - name: chart-testing (lint)
         if: inputs.chart-testing-cli-command == 'lint'
         run: |
           EXTRA_ARGS=()
-          if [[ "${{ inputs.has-image }}" == "true" ]]; then
+          if [[ "$HAS_IMAGE" == "true" ]]; then
             EXTRA_ARGS=(--helm-lint-extra-args "--set=image.tag=$TAG")
           fi
           docker run --rm --network host --workdir=/data --volume ~/.kube/config:/root/.kube/config:ro \
-            --volume $(pwd):/data quay.io/helmpack/chart-testing:${{ inputs.chart-testing-cli-version }} \
-            ct ${{ inputs.chart-testing-cli-command }} --charts $CHART_PATH \
-            "${EXTRA_ARGS[@]}" --validate-maintainers=false
+            --volume "$PWD:/data" "quay.io/helmpack/chart-testing:$CHART_TESTING_CLI_VERSION" \
+            ct lint --charts "$CHART_PATH" "${EXTRA_ARGS[@]}" --validate-maintainers=false
 
       #https://github.com/helm/chart-testing/blob/main/doc/ct_install.md
       - name: chart-testing (install)
-        if: inputs.chart-testing-cli-command == 'install' && inputs.is-library-chart == false
+        if: inputs.chart-testing-cli-command == 'install' && !inputs.is-library-chart
         run: |
           EXTRA_ARGS=()
-          if [[ "${{ inputs.has-image }}" == "true" ]]; then
-            #Note: we can only fully install the chart if we have pushed the image as well, assumption inputs.push-chart == inputs.push-image
-            ARGS="--set=image.tag=$TAG"
-            if [[ "${{ inputs.push-chart }}" == "false" ]]; then
-              ARGS="--set=image.repository=nginx --set=image.tag=latest"
+          if [[ "$HAS_IMAGE" == "true" ]]; then
+            #An unpublished image cannot be pulled, so install a placeholder instead.
+            SET_ARGS="--set=image.tag=$TAG"
+            if [[ "$PUSH_CHART" == "false" ]]; then
+              SET_ARGS="--set=image.repository=nginx --set=image.tag=latest"
             fi
-            EXTRA_ARGS=(--helm-extra-set-args "$ARGS")
+            EXTRA_ARGS=(--helm-extra-set-args "$SET_ARGS")
           fi
           docker run --rm --network host --workdir=/data --volume ~/.kube/config:/root/.kube/config:ro \
-            --volume $(pwd):/data quay.io/helmpack/chart-testing:${{ inputs.chart-testing-cli-version }} \
-            ct ${{ inputs.chart-testing-cli-command }} --charts $CHART_PATH \
-            "${EXTRA_ARGS[@]}" --build-id ${{ github.run_id }}
+            --volume "$PWD:/data" "quay.io/helmpack/chart-testing:$CHART_TESTING_CLI_VERSION" \
+            ct install --charts "$CHART_PATH" "${EXTRA_ARGS[@]}" --build-id "$GITHUB_RUN_ID"
 
+      #https://helm.sh/docs/helm/helm_push/
       - name: helm push
-        if: inputs.push-chart == true
-        run: |
-          #https://helm.sh/docs/helm/helm_push/
-          printf "\n\n>helm push ${{ github.workspace }}/artifacts/$CHART_NAME-$TAG.tgz oci://$CHART_REGISTRY/$CHART_REPOSITORY_PREFIX\n"
-          helm push ${{ github.workspace }}/artifacts/$CHART_NAME-$TAG.tgz oci://$CHART_REGISTRY/$CHART_REPOSITORY_PREFIX
+        if: inputs.push-chart
+        run: helm push "$ARTIFACTS_PATH/$CHART_NAME-$TAG.tgz" "oci://$CHART_REGISTRY/$CHART_REPOSITORY_PREFIX"

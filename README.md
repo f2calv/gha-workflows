@@ -110,7 +110,7 @@ controls, not ordinary validation inputs; `destroy` auto-approves.
 | Workflow | Description | Key Inputs |
 | --- | --- | --- |
 | [Container Image Build](.github/workflows/container-image-build.yml) | Multi-architecture buildx build and optional push; optional single-platform smoke test before the final build. Uses the caller's GitHub token for registry login, not independent ACR/Docker Hub credentials. No existing-tag conflict check enforces immutability. | `registry` (required), `tag` (required), `runs-on`, `repository`, `repository-prefix`, `dockerfile`, `default-branch-tag`, `feature-branch-tag`, `platform`, `args`, `default-branch`, `push-image`, `attestations`, `github-private-packages-auth`, `extra-repos`, `smoke-test`, `smoke-test-platform` |
-| [Helm Chart Package](.github/workflows/helm-chart-package.yml) | Lint, package and push a Helm chart to an OCI registry. The Helm version comes from `.devcontainer/devcontainer.json`; chart testing can use lint or KIND-backed install mode. | `tag` (required), `image-registry` (required), `image-repository` (required), `chart-registry` (required), `chart-repository` (required), `runs-on`, `tag-override`, `chart-path`, `is-library-chart`, `set-chart-app-version`, `has-image`, `push-chart`, chart testing and registry credentials |
+| [Helm Chart Package](.github/workflows/helm-chart-package.yml) | Lint, package and push a Helm chart to an OCI registry. The Helm version comes from `.devcontainer/devcontainer.json`; chart testing can use lint, KIND-backed install or skip mode. | `tag` (required), `image-registry` (required), `image-repository` (required), `chart-registry` (required), `chart-repository` (required), `runs-on`, `tag-override`, `chart-path`, `is-library-chart`, `set-chart-app-version`, `has-image`, `push-chart`, `chart-registry-username`, `chart-dependency-name`, `chart-testing-cli-command`, `chart-testing-cli-version` |
 | [GitOps Helm Update](.github/workflows/gitops-helm-update.yml) | Update image and chart coordinates in ArgoCD Helm manifests, then optionally commit them to a GitOps repository. Requires `GH_PAT_GITOPS`. | `manifest-paths` (required), `tag` (required), `namespace` (required), `image-registry` (required), `image-repository` (required), `gitops-repo` (required), `runs-on`, `tag-override`, chart coordinates, Git controls, `devcontainer-path`, `environment` |
 | [GitOps Manifest Update](.github/workflows/gha-gitops-manifest-update.yml) | Update image and optional chart coordinates in Kubernetes manifests via [f2calv/gha-gitops-manifest-update](https://github.com/f2calv/gha-gitops-manifest-update), then optionally commit them. | `tag` (required), `image-registry` (required), `image-repository` (required), `manifest-paths` (required), `namespace` (required), `runs-on`, `tag-override`, chart coordinates, `devcontainer-path`, Git repository and commit controls |
 | [Package Cleanup](.github/workflows/package-cleanup.yml) | Prune old container and Helm chart versions from ghcr.io via [dataaxiom/ghcr-cleanup-action](https://github.com/dataaxiom/ghcr-cleanup-action). Keeps the N most-recent tagged versions, deletes untagged orphans, and protects excluded tags. Defaults to dry-run. | `packages` (required), `runs-on`, `keep-n-tagged`, `exclude-tags`, `older-than`, `delete-untagged`, `dry-run` |
@@ -129,8 +129,10 @@ segment of `chart-repository`, such as `example/charts/example-app`. The default
 is not a chart-discovery mechanism. Packaging changes chart version, optional appVersion,
 image values and optionally a named dependency. `is-library-chart: true` skips rendering
 and install testing; `has-image: false` avoids image-value rewriting.
-Chart testing defaults to `lint` and image version `latest`; `install` creates a KIND cluster.
-The declared `chart-registry-password` input is ignored: the workflow uses `GITHUB_TOKEN`.
+`chart-testing-cli-command` accepts `lint` (default), `install`, which creates a KIND cluster,
+or `skip`, which relies on the `helm lint` run during packaging. `chart-testing-cli-version`
+pins the chart-testing image, default `v3.15.0`. The registry password is always the caller's
+`GITHUB_TOKEN`. Inputs are validated and lowercased before use; an invalid value fails the job.
 
 Both GitOps wrappers check out the target repository and call the same manifest-update Action.
 `gitops-repo-update: false` disables Git commit/push operations, not the manifest edits.
@@ -182,7 +184,7 @@ that select an environment, subject to its protection rules.
 | --- | --- | --- |
 | .NET, Go, Python, Rust builds; EF drift; lint | `contents: read` | None for ordinary public source; extra repository reads need actual repository access |
 | Container image build | `contents: read`, `packages: write` for GHCR push (`read` for private pulls) | Uses `GITHUB_TOKEN` for login; no separate registry secret contract |
-| Helm chart package | `contents: read`, `packages: write` for GHCR push | Uses `GITHUB_TOKEN` as chart password; set `chart-registry-username` |
+| Helm chart package | `contents: read`, `packages: write` (callee declares both, even with `push-chart: false`) | Uses `GITHUB_TOKEN` as chart password; set `chart-registry-username` |
 | GitOps Helm update | `contents: read`, `packages: read` | Required declared `GH_PAT_GITOPS` with target-repository read/write access for checkout and commits |
 | Older GitOps manifest update | `contents: read`, `packages: read` when needed | Inherited `GH_PAT_GITOPS`; target write access if update enabled |
 | Package cleanup | `packages: write` | Default token must administer the target owner's packages |
