@@ -35,6 +35,12 @@ jobs:
     runs-on: ${{ inputs.runs-on }}
     permissions:
       contents: read
+    #Free-text inputs are only ever read as quoted environment variables.
+    env:
+      PROJECT: ${{ inputs.project }}
+      STARTUP_PROJECT: ${{ inputs.startup-project }}
+      DB_CONTEXT: ${{ inputs.context }}
+      CONFIGURATION: ${{ inputs.configuration }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -65,12 +71,11 @@ jobs:
         run: dotnet tool restore
 
       - name: dotnet restore
-        run: dotnet restore ${{ inputs.project }} -p:Configuration=${{ inputs.configuration }} --verbosity minimal
+        run: dotnet restore "$PROJECT" -p:Configuration="$CONFIGURATION" --verbosity minimal
 
       - name: dotnet ef migrations has-pending-model-changes
-        run: >
-          dotnet ef migrations has-pending-model-changes
-          --project ${{ inputs.project }}
-          --startup-project ${{ inputs.startup-project != '' && inputs.startup-project || inputs.project }}
-          ${{ inputs.context != '' && format('--context {0}', inputs.context) || '' }}
-          --configuration ${{ inputs.configuration }}
+        run: |
+          set -euo pipefail
+          ARGS=(--project "$PROJECT" --startup-project "${STARTUP_PROJECT:-$PROJECT}" --configuration "$CONFIGURATION")
+          [[ -z "$DB_CONTEXT" ]] || ARGS+=(--context "$DB_CONTEXT")
+          dotnet ef migrations has-pending-model-changes "${ARGS[@]}"

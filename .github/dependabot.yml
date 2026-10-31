@@ -20,7 +20,9 @@ updates:
       time: "04:00"
 
   - package-ecosystem: nuget
-    directory: /tests/fixtures/dotnet
+    directories:
+      - /
+      - /tests/fixtures/dotnet
     schedule:
       interval: weekly
       time: "04:00"

@@ -11,10 +11,15 @@ on:
         type: string
         description: e.g. 1.2.301-feature-my-feature.12+56
         required: true
+      #Relative to the repository root, not to working-directory.
       go-version-file:
         type: string
         description: Path to the go.mod that pins the Go toolchain version.
         default: go.mod
+      working-directory:
+        type: string
+        description: Go module directory e.g. src/my-app
+        default: .
       package:
         type: string
         description: Package pattern to build/vet/test, e.g. ./... or ./src/my-app
@@ -27,6 +32,14 @@ on:
 jobs:
   app-build-go:
     runs-on: ${{ inputs.runs-on }}
+    defaults:
+      run:
+        working-directory: ${{ inputs.working-directory }}
+    #Free-text inputs are only ever read as quoted environment variables.
+    env:
+      VERSION: ${{ inputs.version }}
+      PACKAGE: ${{ inputs.package }}
+      LDFLAGS: ${{ inputs.ldflags }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -52,15 +65,16 @@ jobs:
         run: go mod verify
 
       - name: go vet
-        run: go vet ${{ inputs.package }}
+        run: go vet "$PACKAGE"
 
       - uses: dominikh/staticcheck-action@v1
         with:
           version: "2026.2.1"
           install-go: false
+          working-directory: ${{ inputs.working-directory }}
 
       - name: go build
-        run: go build -trimpath -ldflags "-s -w -X main.version=${{ inputs.version }} ${{ inputs.ldflags }}" ${{ inputs.package }}
+        run: go build -trimpath -ldflags "-s -w -X main.version=$VERSION $LDFLAGS" "$PACKAGE"
 
       - name: go test
-        run: go test -race ${{ inputs.package }}
+        run: go test -race "$PACKAGE"

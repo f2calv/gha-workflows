@@ -1,0 +1,21 @@
+name: Clone extra repositories
+description: Shallow-clone additional GitHub repositories without persisting credentials.
+
+inputs:
+  repos:
+    description: JSON array e.g. [{"repo":"owner/name","ref":"main","path":"deps/name"}]
+    required: true
+  #Needs read access to every listed repository; the default token only reads the calling repository.
+  token:
+    description: Token used to clone e.g. secrets.GITHUB_TOKEN
+    default: ${{ github.token }}
+
+runs:
+  using: composite
+  steps:
+    - name: clone extra repositories
+      shell: bash
+      env:
+        EXTRA_REPOS: ${{ inputs.repos }}
+        CLONE_TOKEN: ${{ inputs.token }}
+      run: bash "${{ github.action_path }}/.scripts/clone-extra-repos.sh"
