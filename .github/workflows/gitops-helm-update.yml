@@ -35,8 +35,6 @@ on:
         description: Chart registry e.g. ghcr.io/owner
       chart-registry-username:
         type: string
-      chart-registry-password:
-        type: string
       chart-repository:
         type: string
         description: OCI chart repository path.
