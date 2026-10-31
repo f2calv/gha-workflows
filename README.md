@@ -51,7 +51,8 @@ Contracts below describe the current checkout. Compared with `v1.8.8`, it adds b
 | [App Build Python](.github/workflows/app-build-python.yml) | Validate the uv lockfile, restore all dependency groups, run Ruff, mypy and pytest, then build the Python package. Its required `version` input is currently unused. | `version` (required), `runs-on` |
 | [App Build Rust](.github/workflows/app-build-rust.yml) | Check formatting, run Clippy, fetch dependencies and build a Rust project; does not run Cargo tests or inject its required `version`. | `version` (required), `runs-on` |
 
-`dotnet-test-args` is a JSON array so each argument remains distinct. For example,
+`dotnet-restore-args` and `dotnet-build-args` are split on whitespace only, like the container
+`args`. `dotnet-test-args` is a JSON array so each argument remains distinct. For example,
 `["--filter-class", "Example.Tests.CommandTests"]` uses an xUnit v3 filter rather than VSTest syntax.
 The default is `[]`. The caller's test framework must support the supplied arguments.
 
@@ -120,7 +121,9 @@ Container defaults: context `.`, `dockerfile: Dockerfile`, `platform: linux/amd6
 `latest` / `latest-dev`, and `smoke-test-platform: linux/amd64`. The default repository is
 the lowercased caller repository name **without the owner**; supply a full
 `repository: ${{ github.repository }}` for GHCR. Registry login still runs with `push-image: false`.
-The smoke-test command receives `$IMAGE`; build args are a shell-split string, not JSON.
+Registry, repository and tags are lowercased and validated; an invalid value fails the job.
+The smoke-test command receives `$IMAGE`. `args` is split on whitespace only: quotes are not
+interpreted and nothing is expanded, so a single argument cannot contain a space.
 
 Helm always logs in, even with `push-chart: false`. It reads the Helm version from
 `.devcontainer/devcontainer.json` and needs Docker, `jq`, Node/npm and `yq` on the runner.
@@ -132,7 +135,8 @@ and install testing; `has-image: false` avoids image-value rewriting.
 `chart-testing-cli-command` accepts `lint` (default), `install`, which creates a KIND cluster,
 or `skip`, which relies on the `helm lint` run during packaging. `chart-testing-cli-version`
 pins the chart-testing image, default `v3.15.0`. The registry password is always the caller's
-`GITHUB_TOKEN`. Inputs are validated and lowercased before use; an invalid value fails the job.
+`GITHUB_TOKEN`. Inputs are validated before use, and OCI coordinates and the image tag are
+lowercased to match the published image; an invalid value fails the job.
 
 Both GitOps wrappers check out the target repository and call the same manifest-update Action.
 `gitops-repo-update: false` disables Git commit/push operations, not the manifest edits.
@@ -164,7 +168,7 @@ when you require major-only Action aliases. See its [documented limitation](http
 
 | Workflow | Description | Key Inputs |
 | --- | --- | --- |
-| [Lint](.github/workflows/lint.yml) | Run [pre-commit](https://pre-commit.com/) hooks against all files in the repository. | `runs-on`, `pre-commit-version` |
+| [Lint](.github/workflows/lint.yml) | Run [pre-commit](https://pre-commit.com/) hooks against all files in the repository, caching hook environments by configuration. | `runs-on`, `pre-commit-version` |
 
 ### Diagnostics
 
@@ -387,6 +391,7 @@ flowchart LR
     classDef f2calv fill:#dbeafe,stroke:#2563eb,color:#1e3a5f
     W(["_lint"]) --> J["lint"]
     J --> A1["actions/checkout@v7"]
+    J --> A2["actions/cache@v6"]
 ```
 
 ### _test

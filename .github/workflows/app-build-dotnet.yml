@@ -65,7 +65,15 @@ on:
 jobs:
   app-build-dotnet:
     runs-on: ${{ inputs.runs-on }}
-    #if: github.actor != 'dependabot[bot]'
+    #Inputs are free text, so scripts only ever read them as quoted environment variables.
+    env:
+      VERSION: ${{ inputs.version }}
+      CONFIGURATION: ${{ inputs.configuration }}
+      SOLUTION_NAME: ${{ inputs.solution-name }}
+      TEST_SOLUTION_NAME: ${{ inputs.test-solution-name }}
+      DOTNET_RESTORE_ARGS: ${{ inputs.dotnet-restore-args }}
+      DOTNET_BUILD_ARGS: ${{ inputs.dotnet-build-args }}
+      COLLECT_COVERAGE: ${{ inputs.collect-coverage }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -93,48 +101,42 @@ jobs:
             9.0.x
             10.0.x
 
-      - name: dotnet workload restore
-        run: dotnet workload restore ${{ inputs.solution-name }}
+      #Argument inputs are split on whitespace only: no globbing, quote parsing or expansion of caller text.
+      - name: dotnet workload restore/restore/build
+        run: |
+          set -euo pipefail
+          TARGET=()
+          [[ -z "$SOLUTION_NAME" ]] || TARGET=("$SOLUTION_NAME")
+          read -r -d '' -a RESTORE_ARGS <<< "$DOTNET_RESTORE_ARGS" || true
+          read -r -d '' -a BUILD_ARGS <<< "$DOTNET_BUILD_ARGS" || true
 
-      - name: dotnet restore
-        run: dotnet restore ${{ inputs.solution-name }} --verbosity minimal ${{ inputs.dotnet-restore-args }}
+          dotnet workload restore "${TARGET[@]}"
+          dotnet restore "${TARGET[@]}" --verbosity minimal "${RESTORE_ARGS[@]}"
+          dotnet build "${TARGET[@]}" -c "$CONFIGURATION" --nologo --no-restore \
+            -p:Version="$VERSION" -p:SourceRevisionId="$GITHUB_SHA" \
+            -p:GitRepository="$GITHUB_REPOSITORY" -p:GitBranch="$GITHUB_REF" \
+            -p:BuildWorkflow="$GITHUB_WORKFLOW" -p:BuildRunId="$GITHUB_RUN_ID" \
+            -p:BuildRunNumber="$GITHUB_RUN_NUMBER" "${BUILD_ARGS[@]}"
 
-      - name: dotnet build
-        env:
-          #Free-text context values are passed through the environment, never interpolated into the script.
-          GIT_REPOSITORY: ${{ github.repository }}
-          GIT_BRANCH: ${{ github.ref }}
-          BUILD_WORKFLOW: ${{ github.workflow }}
-        run: >-
-          dotnet build ${{ inputs.solution-name }} -c ${{ inputs.configuration }} --nologo --no-restore
-          -p:Version='${{ inputs.version }}' -p:SourceRevisionId='${{ github.sha }}'
-          -p:GitRepository="$GIT_REPOSITORY" -p:GitBranch="$GIT_BRANCH"
-          -p:BuildWorkflow="$BUILD_WORKFLOW" -p:BuildRunId='${{ github.run_id }}'
-          -p:BuildRunNumber='${{ github.run_number }}' ${{ inputs.dotnet-build-args }}
-
-      - name: dotnet restore (test target)
+      - name: dotnet restore/build (test target)
         if: inputs.test-solution-name != '' && inputs.test-solution-name != inputs.solution-name
-        run: dotnet restore ${{ inputs.test-solution-name }} --verbosity minimal ${{ inputs.dotnet-restore-args }}
+        run: |
+          set -euo pipefail
+          read -r -d '' -a RESTORE_ARGS <<< "$DOTNET_RESTORE_ARGS" || true
+          read -r -d '' -a BUILD_ARGS <<< "$DOTNET_BUILD_ARGS" || true
 
-      - name: dotnet build (test target)
-        if: inputs.test-solution-name != '' && inputs.test-solution-name != inputs.solution-name
-        env:
-          GIT_REPOSITORY: ${{ github.repository }}
-          GIT_BRANCH: ${{ github.ref }}
-          BUILD_WORKFLOW: ${{ github.workflow }}
-        run: >-
-          dotnet build ${{ inputs.test-solution-name }} -c ${{ inputs.configuration }} --no-restore --nologo
-          -p:Version='${{ inputs.version }}' -p:SourceRevisionId='${{ github.sha }}'
-          -p:GitRepository="$GIT_REPOSITORY" -p:GitBranch="$GIT_BRANCH"
-          -p:BuildWorkflow="$BUILD_WORKFLOW" -p:BuildRunId='${{ github.run_id }}'
-          -p:BuildRunNumber='${{ github.run_number }}' ${{ inputs.dotnet-build-args }}
-
+          dotnet restore "$TEST_SOLUTION_NAME" --verbosity minimal "${RESTORE_ARGS[@]}"
+          dotnet build "$TEST_SOLUTION_NAME" -c "$CONFIGURATION" --no-restore --nologo \
+            -p:Version="$VERSION" -p:SourceRevisionId="$GITHUB_SHA" \
+            -p:GitRepository="$GITHUB_REPOSITORY" -p:GitBranch="$GITHUB_REF" \
+            -p:BuildWorkflow="$GITHUB_WORKFLOW" -p:BuildRunId="$GITHUB_RUN_ID" \
+            -p:BuildRunNumber="$GITHUB_RUN_NUMBER" "${BUILD_ARGS[@]}"
       - name: configure Docker Compose (test services)
         if: inputs.execute-tests && inputs.test-compose-services != '[]'
         id: compose
         shell: bash
         run: |
-          echo "COMPOSE_PROJECT_NAME=gha-${{ github.run_id }}-${{ github.run_attempt }}-${RANDOM}${RANDOM}" >> "$GITHUB_ENV"
+          echo "COMPOSE_PROJECT_NAME=gha-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT-${RANDOM}${RANDOM}" >> "$GITHUB_ENV"
           echo 'configured=true' >> "$GITHUB_OUTPUT"
 
       - name: docker compose up (test services)
@@ -163,7 +165,6 @@ jobs:
         if: inputs.execute-tests
         shell: bash
         env:
-          CONFIGURATION: ${{ inputs.configuration }}
           DOTNET_TEST_ARGS: ${{ inputs.dotnet-test-args }}
           TEST_TARGET: ${{ inputs.test-solution-name || inputs.solution-name }}
         run: |
@@ -186,7 +187,7 @@ jobs:
           fi
           mapfile -t extra_args < <(jq -r '.[]' <<<"$DOTNET_TEST_ARGS")
           command+=("${extra_args[@]}")
-          if [[ "${{ inputs.collect-coverage }}" == "true" ]]; then
+          if [[ "$COLLECT_COVERAGE" == "true" ]]; then
             command+=(--coverage --coverage-output-format xml)
           fi
           echo "${command[*]}"

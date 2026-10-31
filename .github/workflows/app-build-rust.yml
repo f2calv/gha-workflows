@@ -22,7 +22,6 @@ jobs:
 
       - name: cargo version
         run: cargo version
-        if: false #debug
 
       - name: cargo fmt
         run: cargo fmt --all --check
@@ -35,8 +34,3 @@ jobs:
 
       - name: cargo build
         run: cargo build --release
-
-      # - name: cargo test
-      #   run: cargo test
-
-      #TODO: could run cargo test here, etc...

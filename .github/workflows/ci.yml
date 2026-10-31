@@ -49,6 +49,7 @@ jobs:
       solution-name: tests/fixtures/dotnet/Fixture.slnx
       collect-coverage: true
       coverage-artifact-name: fixture-coverage
+      dotnet-build-args: -p:Deterministic=true -p:ContinuousIntegrationBuild=true
     permissions:
       contents: read
 
@@ -57,7 +58,9 @@ jobs:
     uses: ./.github/workflows/container-image-build.yml
     with:
       registry: ghcr.io/${{ github.repository_owner }}
-      repository: gha-workflows-fixture
+      #Mixed case and multi-word args exercise the lowercasing and whitespace argument split.
+      repository: GHA-Workflows-Fixture
+      args: --label fixture=self-test --label org.opencontainers.image.title=fixture
       dockerfile: tests/fixtures/container/Dockerfile
       tag: ${{ needs.versioning.outputs.version }}
       push-image: false
@@ -73,7 +76,8 @@ jobs:
     with:
       tag: ${{ needs.versioning.outputs.version }}
       image-registry: ghcr.io
-      image-repository: ${{ github.repository_owner }}/fixture-app
+      #Mixed case exercises lowercasing; values.yaml must receive the lowercased coordinate and tag.
+      image-repository: ${{ github.repository_owner }}/Fixture-App
       chart-registry: ghcr.io
       chart-registry-username: ${{ github.repository_owner }}
       chart-repository: ${{ github.repository_owner }}/charts/fixture-app

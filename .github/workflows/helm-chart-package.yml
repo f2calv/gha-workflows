@@ -77,15 +77,16 @@ jobs:
     permissions:
       contents: read
       packages: write
-    #Inputs are free text, so scripts only ever read them as quoted environment variables.
+    #Inputs are free text, so scripts only ever read them as quoted environment variables. Values the
+    #first step normalises arrive as IN_*, because job env would override a same-named GITHUB_ENV value.
     env:
       TAG: ${{ inputs.tag }}
       TAG_OVERRIDE: ${{ inputs.tag-override }}
-      IMAGE_REGISTRY: ${{ inputs.image-registry }}
-      IMAGE_REPOSITORY: ${{ inputs.image-repository }}
-      CHART_REGISTRY: ${{ inputs.chart-registry }}
+      IN_IMAGE_REGISTRY: ${{ inputs.image-registry }}
+      IN_IMAGE_REPOSITORY: ${{ inputs.image-repository }}
+      IN_CHART_REGISTRY: ${{ inputs.chart-registry }}
       CHART_REGISTRY_USERNAME: ${{ inputs.chart-registry-username }}
-      CHART_REPOSITORY: ${{ inputs.chart-repository }}
+      IN_CHART_REPOSITORY: ${{ inputs.chart-repository }}
       CHART_PATH: ${{ inputs.chart-path }}
       CHART_DEPENDENCY: ${{ inputs.chart-dependency-name }}
       IS_LIBRARY_CHART: ${{ inputs.is-library-chart }}
@@ -103,10 +104,10 @@ jobs:
           require() { [[ "$2" =~ $3 ]] || fail "$1 '$2' is invalid."; }
 
           #Lowercase OCI coordinates before validation; values never reach GITHUB_ENV unvalidated.
-          IMAGE_REGISTRY=${IMAGE_REGISTRY,,}
-          IMAGE_REPOSITORY=${IMAGE_REPOSITORY,,}
-          CHART_REGISTRY=${CHART_REGISTRY,,}
-          CHART_REPOSITORY=${CHART_REPOSITORY,,}
+          IMAGE_REGISTRY=${IN_IMAGE_REGISTRY,,}
+          IMAGE_REPOSITORY=${IN_IMAGE_REPOSITORY,,}
+          CHART_REGISTRY=${IN_CHART_REGISTRY,,}
+          CHART_REPOSITORY=${IN_CHART_REPOSITORY,,}
 
           VERSION_PATTERN='^[0-9A-Za-z][0-9A-Za-z._+-]*$'
           OCI_PATTERN='^[a-z0-9][a-z0-9._:/-]*$'
@@ -126,7 +127,9 @@ jobs:
           esac
 
           IMAGE_PREFIX="$IMAGE_REGISTRY/$IMAGE_REPOSITORY"
+          #Matches the lowercased tag container-image-build publishes.
           IMAGE_TAG="${TAG_OVERRIDE:-$TAG}"
+          IMAGE_TAG=${IMAGE_TAG,,}
           CHART_NAME=$(basename "$CHART_PATH")
           CHART_REPOSITORY_PREFIX=$(dirname "$CHART_REPOSITORY")
 

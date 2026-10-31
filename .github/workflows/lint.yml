@@ -15,27 +15,24 @@ on:
 jobs:
   lint:
     runs-on: ${{ inputs.runs-on }}
+    env:
+      PRE_COMMIT_VERSION: ${{ inputs.pre-commit-version }}
     steps:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 1
 
+      #Hook environments are keyed on the configuration, so an unchanged config reuses them.
+      - uses: actions/cache@v6
+        with:
+          path: ~/.cache/pre-commit
+          key: pre-commit-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.pre-commit-config.yaml') }}
+
       #https://pre-commit.com/
-      - name: pre-commit
+      - name: pre-commit run --all-files
         run: |
-          python3 -m venv /opt/test/
-          source /opt/test/bin/activate
-
-          echo "pre-commit setup..."
-
-          #sudo apt-get update && sudo apt-get install -y python3 pip pre-commit
-          python3 -m pip install 'pre-commit~=${{ inputs.pre-commit-version }}' -q
-
-          echo "git setup..."
-          git init
-          git add *
-
-          echo "pre-commit execute..."
-          #python3 -m pre_commit autoupdate
-          #python3 -m pre_commit install --install-hooks
-          python3 -m pre_commit run --all-files --verbose
+          set -euo pipefail
+          [[ "$PRE_COMMIT_VERSION" =~ ^[0-9]+(\.[0-9]+)*$ ]] || { echo "::error::pre-commit-version '$PRE_COMMIT_VERSION' is invalid."; exit 1; }
+          python3 -m venv "$RUNNER_TEMP/pre-commit"
+          "$RUNNER_TEMP/pre-commit/bin/python" -m pip install --quiet "pre-commit~=$PRE_COMMIT_VERSION"
+          "$RUNNER_TEMP/pre-commit/bin/python" -m pre_commit run --all-files --verbose
