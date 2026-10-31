@@ -18,3 +18,15 @@ updates:
     schedule:
       interval: weekly
       time: "04:00"
+
+  - package-ecosystem: nuget
+    directory: /tests/fixtures/dotnet
+    schedule:
+      interval: weekly
+      time: "04:00"
+
+  - package-ecosystem: docker
+    directory: /tests/fixtures/container
+    schedule:
+      interval: weekly
+      time: "04:00"

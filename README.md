@@ -397,6 +397,20 @@ flowchart LR
     W(["_test"]) --> J["test"]
 ```
 
+## Self-Tests
+
+This repository's CI calls its own reusable workflows from the commit under review against small
+fixtures in [tests/fixtures](tests/fixtures), before a release moves the floating major alias:
+
+| Workflow | Fixture | Exercises |
+| --- | --- | --- |
+| `app-build-dotnet.yml` | .NET library and xUnit v3 tests | Restore, build, Microsoft.Testing.Platform tests and coverage upload |
+| `container-image-build.yml` | Minimal multi-architecture image | Default platforms and the smoke test; never pushed |
+| `helm-chart-package.yml` | Chart that owns an image value | Image rewriting, packaging and `ct lint`; never pushed |
+
+The root `global.json` and the Helm version in `.devcontainer/devcontainer.json` exist for these
+fixtures, matching what the workflows require from a caller.
+
 ## Companion Actions
 
 The release and GitOps wrappers call these companion composite Actions:
