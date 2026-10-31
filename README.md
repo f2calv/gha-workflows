@@ -76,9 +76,9 @@ Rust expects Cargo/rustfmt/Clippy on the selected runner; it installs no toolcha
 
 Where supported, `extra-repos` is a JSON array of objects with `repo`, `ref`, and `path`,
 for example `[{"repo":"example/dependency","ref":"main","path":"deps/dependency"}]`.
-The implementation uses a shallow `--branch` clone: supply a real branch/tag instead of relying
-on its `HEAD` fallback. The caller token must actually have read access; the default token
-does not automatically grant access to another private repository.
+Cloning uses the [clone-extra-repos](.github/actions/clone-extra-repos/action.yml) action: a shallow
+clone of `ref`, or of the default branch when `ref` is omitted, without persisting the token. The caller token
+must actually have read access; the default token does not automatically grant access to another private repository.
 
 ### Mobile Deployment
 
@@ -256,6 +256,8 @@ flowchart LR
     J --> A1["actions/checkout@v7"]
     J --> A2["actions/setup-dotnet@v6"]
     J --> A3["actions/upload-artifact@v7 (optional coverage)"]
+    J --> A4["f2calv/gha-workflows/.github/actions/clone-extra-repos@v1"]
+    class A4 f2calv
 ```
 
 ### _app-build-go
@@ -307,6 +309,8 @@ flowchart LR
     W(["_ef-migrations-drift"]) --> J["ef-migrations-drift"]
     J --> A1["actions/checkout@v7"]
     J --> A2["actions/setup-dotnet@v6"]
+    J --> A3["f2calv/gha-workflows/.github/actions/clone-extra-repos@v1"]
+    class A3 f2calv
 ```
 
 ### _terraform
@@ -329,6 +333,8 @@ flowchart LR
     classDef f2calv fill:#dbeafe,stroke:#2563eb,color:#1e3a5f
     W(["_container-image-build"]) --> J["container-image-build"]
     J --> A1["actions/checkout@v7"]
+    J --> A2["f2calv/gha-workflows/.github/actions/clone-extra-repos@v1"]
+    class A2 f2calv
 ```
 
 ### _helm-chart-package

@@ -50,6 +50,8 @@ jobs:
       collect-coverage: true
       coverage-artifact-name: fixture-coverage
       dotnet-build-args: -p:Deterministic=true -p:ContinuousIntegrationBuild=true
+      #Exercises the published clone-extra-repos action through the reusable workflow.
+      extra-repos: '[{"repo":"f2calv/gha-check-release-exists","path":"deps/gha-check-release-exists"}]'
     permissions:
       contents: read
 
