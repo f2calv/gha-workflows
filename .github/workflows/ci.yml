@@ -69,6 +69,7 @@ jobs:
         test "$(docker run --rm "$IMAGE")" = "${EXPECTED,,}"
     permissions:
       contents: read
+      packages: write
 
   test-helm:
     needs: versioning
