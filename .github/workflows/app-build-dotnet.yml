@@ -81,18 +81,9 @@ jobs:
 
       - name: clone extra repositories
         if: inputs.extra-repos != '[]'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          EXTRA_REPOS: ${{ inputs.extra-repos }}
-        run: |
-          echo "$EXTRA_REPOS" | jq -c '.[]' | while read -r item; do
-            REPO=$(echo "$item" | jq -r '.repo')
-            REF=$(echo "$item" | jq -r '.ref // "HEAD"')
-            DEST=$(echo "$item" | jq -r '.path // "deps"')
-            echo "Cloning $REPO@$REF into $DEST"
-            git clone --depth 1 --branch "$REF" \
-              "https://x-access-token:${GH_TOKEN}@github.com/${REPO}.git" "$DEST"
-          done
+        uses: f2calv/gha-workflows/.github/actions/clone-extra-repos@v1
+        with:
+          repos: ${{ inputs.extra-repos }}
 
       - uses: actions/setup-dotnet@v6
         with:
