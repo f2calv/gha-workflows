@@ -67,9 +67,10 @@ jobs:
       - name: go vet
         run: go vet "$PACKAGE"
 
+      #Must support the module's Go release; older staticcheck cannot read newer export data.
       - uses: dominikh/staticcheck-action@v1
         with:
-          version: "2026.2.1"
+          version: "2026.2.2"
           install-go: false
           working-directory: ${{ inputs.working-directory }}
 
