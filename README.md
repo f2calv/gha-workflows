@@ -94,7 +94,7 @@ must actually have read access; the default token does not automatically grant a
 
 | Workflow | Description | Key Inputs |
 | --- | --- | --- |
-| [Terraform](.github/workflows/terraform.yml) | Backend-free `validate` or `test` (no `id-token` needed), or Azure-backed `plan`, `apply`, `plan+apply`, `destroy`. A plan artifact can be consumed by another job in the same workflow run; no cross-run artifact ID is accepted. | `working-directory` (required), `runs-on`, `command` (`plan`), `terraform-version` (`1.13.3`), `environment`, `environment-files`, `backend-config`, `backend-config-file`, `azure-backend-key`, `var-file`, `azure-login` (`true`), `use-oidc` (`true`), `artifact-name` (`tfplan`), `log-level` (`ERROR`), `deployment-version`, `deployment-commit`, `deployment-layer`, `lock-id`, `state-rm`, `expected-release-tag`, `readme-path` (`README.md`) |
+| [Terraform](.github/workflows/terraform.yml) | Backend-free `validate` or `test`, or Azure-backed `plan`, `apply`, `plan+apply`, `destroy`. A plan artifact can be consumed by another job in the same workflow run; no cross-run artifact ID is accepted. | `working-directory` (required), `runs-on`, `command` (`plan`), `terraform-version` (`1.13.3`), `environment`, `environment-files`, `backend-config`, `backend-config-file`, `azure-backend-key`, `var-file`, `azure-login` (`true`), `use-oidc` (`true`), `artifact-name` (`tfplan`), `log-level` (`ERROR`), `deployment-version`, `deployment-commit`, `deployment-layer`, `lock-id`, `state-rm`, `expected-release-tag`, `readme-path` (`README.md`) |
 
 Terraform environment files contain scalar top-level key/value pairs, separated by newlines;
 later files override earlier ones. Backend settings are one `key=value` per line; backend and
@@ -192,7 +192,7 @@ that select an environment, subject to its protection rules.
 | GitOps Helm update | `contents: read`, `packages: read` | Required declared `GH_PAT_GITOPS` with target-repository read/write access for checkout and commits |
 | Package cleanup | `packages: write` | Default token must administer the target owner's packages |
 | Release calculation / publication | `contents: read` / `contents: write` | Automatic token; full authenticated history is checked out internally |
-| Terraform | `contents: read`; plus `id-token: write` for every command except `validate` and `test` | For Azure operations: `ARM_TENANT_ID`, `ARM_SUBSCRIPTION_ID`, `ARM_CLIENT_ID`; additionally `ARM_CLIENT_SECRET` when `use-oidc: false` |
+| Terraform | `contents: read`, `id-token: write` (validated at startup for every command, including `validate` and `test`) | For Azure operations: `ARM_TENANT_ID`, `ARM_SUBSCRIPTION_ID`, `ARM_CLIENT_ID`; additionally `ARM_CLIENT_SECRET` when `use-oidc: false` |
 | .NET NuGet library | `contents: write`, `id-token: write`, `packages: write` | Automatic token; nuget.org Trusted Publishing when `nuget-user` is set |
 | MAUI Android | `contents: read` | With `deploy: true`, map the declared `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD` and `GOOGLE_PLAY_SERVICE_ACCOUNT_JSON` secrets |
 
@@ -432,7 +432,7 @@ fixtures in [tests/fixtures](tests/fixtures), before a release moves the floatin
 | `app-build-rust.yml` | Cargo binary with a unit test | `working-directory`, toolchain setup, fmt, Clippy, build and tests |
 | `app-build-python.yml` | Locked uv package | Lockfile check, Ruff, mypy, pytest and `uv build` |
 | `app-build-go.yml` | Go module outside the repository root | `working-directory`, vet, staticcheck, build and race tests |
-| `terraform.yml` | Root module with one output and a test file | Backend-free `validate`, `fmt` and `terraform test` without `id-token` |
+| `terraform.yml` | Root module with one output and a test file | Backend-free `validate`, `fmt` and `terraform test` |
 | `helm-lint.yml` | The chart fixture and its `ci/` values | Devcontainer Helm version, dependency build and fixture lint |
 | `dotnet-nuget-library.yml` | The .NET fixture with `release: false` | Nested lint, versioning and gha-dotnet-nuget build and tests |
 | `readme-ref-check.yml` | This README | The floating major reference for this repository's workflows |

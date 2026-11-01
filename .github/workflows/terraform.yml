@@ -108,7 +108,8 @@ on:
 permissions: {}
 
 jobs:
-  #Backend-free commands need no cloud identity, so they run without id-token permission.
+  #Backend-free commands run without a cloud identity. Callers still grant id-token: write, because
+  #GitHub validates the online job's permissions at startup even when it is skipped.
   terraform-offline:
     name: terraform ${{ inputs.command }}
     if: inputs.command == 'validate' || inputs.command == 'test'

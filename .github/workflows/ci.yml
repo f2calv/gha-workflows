@@ -100,8 +100,10 @@ jobs:
       command: test
       working-directory: tests/fixtures/terraform
       azure-login: false
+    #The online job's id-token write is validated at startup even when it is skipped.
     permissions:
       contents: read
+      id-token: write
 
   #Local reference: the same action is consumed by the workflows only once published.
   test-devcontainer-tool-versions:
@@ -174,8 +176,10 @@ jobs:
       command: validate
       working-directory: tests/fixtures/terraform
       azure-login: false
+    #The online job's id-token write is validated at startup even when it is skipped.
     permissions:
       contents: read
+      id-token: write
 
   test-ef-drift:
     uses: ./.github/workflows/ef-migrations-drift.yml
