@@ -28,16 +28,12 @@ jobs:
 
   validate:
     needs: versioning
-    runs-on: ubuntu-24.04
+    uses: ./.github/workflows/readme-ref-check.yml
+    with:
+      major: ${{ needs.versioning.outputs.major }}
+      reference-prefix: ${{ format('{0}/\.github/workflows/.+@', github.repository) }}
     permissions:
       contents: read
-    steps:
-      - uses: actions/checkout@v7
-
-      - name: README floating major tag
-        env:
-          EXPECTED_WORKFLOW_REF: '@v${{ needs.versioning.outputs.major }}'
-        run: grep --extended-regexp --quiet "f2calv/gha-workflows/\.github/workflows/.+${EXPECTED_WORKFLOW_REF}([^[:alnum:]_.-]|$)" README.md
 
   #Self-tests: each job calls the workflow from this commit against a fixture under tests/fixtures,
   #so a change is exercised before the floating major alias moves to it.
@@ -91,6 +87,58 @@ jobs:
       contents: read
       packages: write
 
+  test-helm-lint:
+    uses: ./.github/workflows/helm-lint.yml
+    with:
+      charts: '["tests/fixtures/charts/fixture-app"]'
+    permissions:
+      contents: read
+
+  test-terraform-test:
+    uses: ./.github/workflows/terraform.yml
+    with:
+      command: test
+      working-directory: tests/fixtures/terraform
+      azure-login: false
+    permissions:
+      contents: read
+
+  #Local reference: the same action is consumed by the workflows only once published.
+  test-devcontainer-tool-versions:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 1
+
+      - uses: ./.github/actions/devcontainer-tool-versions
+        id: tools
+
+      - name: assert helm version from devcontainer.json
+        env:
+          HELM_VERSION: ${{ steps.tools.outputs.helm }}
+          YQ_VERSION: ${{ steps.tools.outputs.yq }}
+        run: |
+          echo "helm=$HELM_VERSION yq=$YQ_VERSION"
+          test "$HELM_VERSION" = 3.20.2
+          test "$YQ_VERSION" = latest
+          git diff --exit-code -- .devcontainer/devcontainer.json
+
+  #release: false - the nested release job must never tag this repository.
+  test-dotnet-nuget-library:
+    uses: ./.github/workflows/dotnet-nuget-library.yml
+    with:
+      solution-name: tests/fixtures/dotnet/Fixture.slnx
+      dotnet-test-args: '["--minimum-expected-tests", "4"]'
+      code-coverage: false
+      release: false
+    permissions:
+      contents: read
+      id-token: write
+      packages: write
+
   test-go:
     needs: versioning
     uses: ./.github/workflows/app-build-go.yml
@@ -127,7 +175,6 @@ jobs:
       azure-login: false
     permissions:
       contents: read
-      id-token: write
 
   test-ef-drift:
     uses: ./.github/workflows/ef-migrations-drift.yml
@@ -165,7 +212,7 @@ jobs:
 
   release:
     if: github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
-    needs: [lint, versioning, validate, test-dotnet, test-container, test-helm, test-go, test-rust, test-python, test-terraform, test-ef-drift, test-clone-extra-repos]
+    needs: [lint, versioning, validate, test-dotnet, test-container, test-helm, test-go, test-rust, test-python, test-terraform, test-terraform-test, test-helm-lint, test-devcontainer-tool-versions, test-dotnet-nuget-library, test-ef-drift, test-clone-extra-repos]
     uses: ./.github/workflows/gha-release-versioning.yml
     with:
       semVer: ${{ format('{0}.{1}.{2}', needs.versioning.outputs.major, needs.versioning.outputs.minor, needs.versioning.outputs.patch) }}
