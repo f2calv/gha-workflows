@@ -1,0 +1,106 @@
+name: _dotnet-nuget-library
+
+#Complete CI for a NuGet library repository: lint, version, build/test/pack/push and release.
+#TODO: test services (Compose) are not supported yet; libraries that need them keep their own build
+#job until a test-services composite action is published and can be shared with app-build-dotnet.
+on:
+  workflow_call:
+    inputs:
+      runs-on:
+        type: string
+        description: Runner label, e.g. ubuntu-24.04-arm for a native arm64 build.
+        default: ubuntu-24.04
+      solution-name:
+        type: string
+        description: .NET solution or project e.g. MyLibrary.Release.slnx
+        default: ''
+      configuration:
+        type: string
+        description: e.g. Debug or Release
+        default: Release
+      execute-tests:
+        type: boolean
+        description: Run unit tests.
+        default: true
+      #Uploads Cobertura coverage to Coveralls, which must know the repository.
+      code-coverage:
+        type: boolean
+        description: Publish test coverage to Coveralls.
+        default: true
+      dotnet-test-args:
+        type: string
+        description: Test arguments, JSON array or plain string e.g. ["--filter-not-trait", "Category=Integration"]
+        default: ''
+      dotnet-restore-args:
+        type: string
+        description: Optional dotnet restore arguments.
+        default: ''
+      push-preview:
+        type: boolean
+        description: Push a pre-release package from a non-default branch.
+        default: false
+      package-filter:
+        type: string
+        description: Comma-separated package ID prefixes to push e.g. MyLibrary.Core
+        default: ''
+      #The nuget.org Trusted Publishing policy owner; empty skips nuget.org.
+      nuget-user:
+        type: string
+        description: nuget.org profile name e.g. github.repository_owner
+        default: ''
+      #Disable only where a caller must not create tags, such as this repository's own self-test.
+      release:
+        type: boolean
+        description: Tag and release major.minor.patch from the default branch.
+        default: true
+
+permissions: {}
+
+jobs:
+  lint:
+    uses: f2calv/gha-workflows/.github/workflows/lint.yml@v1
+    permissions:
+      contents: read
+
+  versioning:
+    uses: f2calv/gha-workflows/.github/workflows/gha-release-versioning.yml@v1
+    permissions:
+      contents: read
+    with:
+      tag-prefix: ''
+      tag-and-release: false
+
+  build:
+    needs: versioning
+    runs-on: ${{ inputs.runs-on }}
+    permissions:
+      contents: read
+      id-token: write
+      packages: write
+    steps:
+      - uses: f2calv/gha-dotnet-nuget@v2
+        with:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          nuget-user: ${{ inputs.nuget-user }}
+          version: ${{ needs.versioning.outputs.version }}
+          solution-name: ${{ inputs.solution-name }}
+          configuration: ${{ inputs.configuration }}
+          execute-tests: ${{ inputs.execute-tests }}
+          code-coverage: ${{ inputs.code-coverage }}
+          dotnet-test-args: ${{ inputs.dotnet-test-args }}
+          dotnet-restore-args: ${{ inputs.dotnet-restore-args }}
+          push-preview: ${{ inputs.push-preview }}
+          package-filter: ${{ inputs.package-filter }}
+
+  release:
+    needs: [lint, versioning, build]
+    if: inputs.release
+      && needs.versioning.outputs.release-exists == 'false'
+      && github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+    uses: f2calv/gha-workflows/.github/workflows/gha-release-versioning.yml@v1
+    permissions:
+      contents: write
+    with:
+      semVer: ${{ format('{0}.{1}.{2}', needs.versioning.outputs.major, needs.versioning.outputs.minor, needs.versioning.outputs.patch) }}
+      tag-prefix: ''
+      move-major-tag: false

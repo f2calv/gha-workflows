@@ -1,0 +1,53 @@
+name: _readme-ref-check
+
+on:
+  workflow_call:
+    inputs:
+      runs-on:
+        type: string
+        description: Runner label, e.g. ubuntu-24.04-arm for a native arm64 build.
+        default: ubuntu-24.04
+      major:
+        type: string
+        description: Floating major version the README must reference e.g. 2
+        required: true
+      #Extended regex placed before v<major>. Empty matches the calling repository as an Action,
+      #e.g. owner/action@; reusable-workflow collections pass owner/repo/\.github/workflows/.+@.
+      reference-prefix:
+        type: string
+        description: Regex preceding the tag e.g. owner/repo/\.github/workflows/.+@
+        default: ''
+      readme-path:
+        type: string
+        description: README path e.g. README.md
+        default: README.md
+
+permissions: {}
+
+jobs:
+  readme-ref-check:
+    runs-on: ${{ inputs.runs-on }}
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+
+      #v2.1 must not satisfy an @v2 check, so the tag must be followed by a non-version character.
+      - name: README floating major tag
+        env:
+          MAJOR: ${{ inputs.major }}
+          REFERENCE_PREFIX: ${{ inputs.reference-prefix }}
+          README_PATH: ${{ inputs.readme-path }}
+        run: |
+          set -euo pipefail
+          [[ "$MAJOR" =~ ^[0-9]+$ ]] || { echo "::error::major '$MAJOR' must be a number."; exit 1; }
+          if [[ -z "$REFERENCE_PREFIX" ]]; then
+            #Owner and repository names only contain letters, digits, '.', '_' and '-'; escape the dots.
+            REFERENCE_PREFIX="${GITHUB_REPOSITORY//./\\.}@"
+          fi
+          PATTERN="${REFERENCE_PREFIX}v${MAJOR}([^[:alnum:]_.-]|$)"
+          echo "pattern: $PATTERN"
+          if ! grep --extended-regexp --quiet "$PATTERN" "$README_PATH"; then
+            echo "::error file=$README_PATH::No reference matching $PATTERN."
+            exit 1
+          fi

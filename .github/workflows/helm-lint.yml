@@ -1,0 +1,78 @@
+name: _helm-lint
+
+on:
+  workflow_call:
+    inputs:
+      runs-on:
+        type: string
+        description: Runner label, e.g. ubuntu-24.04-arm for a native arm64 build.
+        default: ubuntu-24.04
+      charts:
+        type: string
+        description: JSON array of chart directories e.g. ["charts/my-app"]
+        required: true
+      #Representative values live under each chart's ci/ folder, matching chart-testing.
+      require-ci-values:
+        type: boolean
+        description: Fail when a chart has no ci/*-values.yaml fixtures.
+        default: true
+      #Empty reads the kubectl-helm-minikube feature's helm version from devcontainer-path.
+      helm-version:
+        type: string
+        description: Helm version override e.g. 3.20.2
+        default: ''
+      devcontainer-path:
+        type: string
+        description: devcontainer.json path e.g. .devcontainer/devcontainer.json
+        default: .devcontainer/devcontainer.json
+
+permissions: {}
+
+jobs:
+  helm:
+    name: helm (${{ matrix.chart }})
+    runs-on: ${{ inputs.runs-on }}
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        chart: ${{ fromJSON(inputs.charts) }}
+    env:
+      CHART: ${{ matrix.chart }}
+      REQUIRE_CI_VALUES: ${{ inputs.require-ci-values }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: f2calv/gha-workflows/.github/actions/devcontainer-tool-versions@v1
+        if: inputs.helm-version == ''
+        id: tools
+        with:
+          path: ${{ inputs.devcontainer-path }}
+
+      - uses: azure/setup-helm@v5
+        with:
+          version: ${{ inputs.helm-version || steps.tools.outputs.helm }}
+
+      - name: helm dependency build
+        run: helm dependency build "$CHART"
+
+      - name: helm lint
+        run: helm lint "$CHART"
+
+      - name: helm lint with ci values
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          fixtures=("$CHART"/ci/*-values.yaml)
+          if [[ ${#fixtures[@]} -eq 0 ]]; then
+            if [[ "$REQUIRE_CI_VALUES" == "true" ]]; then
+              echo "::error::$CHART has no ci/*-values.yaml fixtures."
+              exit 1
+            fi
+            echo "No ci/*-values.yaml fixtures in $CHART."
+            exit 0
+          fi
+          for fixture in "${fixtures[@]}"; do
+            helm lint "$CHART" --values "$fixture"
+          done
