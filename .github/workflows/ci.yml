@@ -134,8 +134,9 @@ jobs:
       dotnet-test-args: '["--minimum-expected-tests", "4"]'
       code-coverage: false
       release: false
+    #The nested release job's contents write is validated at startup even though release is false.
     permissions:
-      contents: read
+      contents: write
       id-token: write
       packages: write
 
