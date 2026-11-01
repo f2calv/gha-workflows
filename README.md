@@ -347,6 +347,8 @@ graph LR
     J --> A1["actions/checkout@v7"]
     J --> A2["azure/setup-helm@v5"]
     J --> A3["helm/kind-action@v1"]
+    J --> A4["f2calv/gha-workflows/.github/actions/devcontainer-tool-versions@v1"]
+    class A4 f2calv
 ```
 
 ### _gitops-helm-update
@@ -388,6 +390,8 @@ graph LR
     W(["_helm-lint"]) --> J["helm (chart)"]
     J --> A1["actions/checkout@v7"]
     J --> A2["azure/setup-helm@v5"]
+    J --> A3["f2calv/gha-workflows/.github/actions/devcontainer-tool-versions@v1"]
+    class A3 f2calv
 ```n
 ### _readme-ref-check
 

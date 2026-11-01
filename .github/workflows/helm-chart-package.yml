@@ -158,29 +158,12 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: setup helm (1 of 3)
-        run: |
-          FILE=.devcontainer/devcontainer.json
-          if [[ -f "$FILE" ]]; then
-            echo "$FILE exists"
-          else
-            echo "::error file=$FILE::helm version is managed by the devcontainer.json, '$FILE' is therefore required!"
-            exit 1
-          fi
+      - uses: f2calv/gha-workflows/.github/actions/devcontainer-tool-versions@v1
+        id: tools
 
-      - name: setup helm (2 of 3) #pull version from devcontainer.json
-        run: |
-          npm install --global json5
-          json5 -c .devcontainer/devcontainer.json
-          VERSION_TO_INSTALL=$(jq -r '.features[] | select(.helm | . != null).helm' .devcontainer/devcontainer.json)
-          git restore .devcontainer/devcontainer.json
-          echo "VERSION_TO_INSTALL=$VERSION_TO_INSTALL" >> "$GITHUB_ENV"
-          echo "VERSION_TO_INSTALL=$VERSION_TO_INSTALL"
-
-      - name: setup helm (3 of 3)
-        uses: azure/setup-helm@v5
+      - uses: azure/setup-helm@v5
         with:
-          version: ${{ env.VERSION_TO_INSTALL }}
+          version: ${{ steps.tools.outputs.helm }}
 
       - name: helm registry login
         env:
