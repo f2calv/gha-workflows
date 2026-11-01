@@ -44,22 +44,15 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - name: read helm version
-        id: helm-version
-        env:
-          HELM_VERSION: ${{ inputs.helm-version }}
-          DEVCONTAINER_PATH: ${{ inputs.devcontainer-path }}
-        run: |
-          set -euo pipefail
-          if [[ -z "$HELM_VERSION" ]]; then
-            HELM_VERSION=$(npx --yes json5@2 "$DEVCONTAINER_PATH" | jq -r '[.features[] | objects | .helm // empty] | first // ""')
-          fi
-          [[ "$HELM_VERSION" =~ ^(latest|v?[0-9]+(\.[0-9]+){0,2})$ ]] || { echo "::error::No usable helm version: '$HELM_VERSION'."; exit 1; }
-          echo "version=$HELM_VERSION" | tee -a "$GITHUB_OUTPUT"
+      - uses: f2calv/gha-workflows/.github/actions/devcontainer-tool-versions@v1
+        if: inputs.helm-version == ''
+        id: tools
+        with:
+          path: ${{ inputs.devcontainer-path }}
 
       - uses: azure/setup-helm@v5
         with:
-          version: ${{ steps.helm-version.outputs.version }}
+          version: ${{ inputs.helm-version || steps.tools.outputs.helm }}
 
       - name: helm dependency build
         run: helm dependency build "$CHART"
