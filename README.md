@@ -113,7 +113,6 @@ controls, not ordinary validation inputs; `destroy` auto-approves.
 | [Container Image Build](.github/workflows/container-image-build.yml) | Multi-architecture buildx build and optional push; optional single-platform smoke test before the final build. Uses the caller's GitHub token for registry login, not independent ACR/Docker Hub credentials. No existing-tag conflict check enforces immutability. | `registry` (required), `tag` (required), `runs-on`, `repository`, `repository-prefix`, `dockerfile`, `default-branch-tag`, `feature-branch-tag`, `platform`, `args`, `default-branch`, `push-image`, `attestations`, `github-private-packages-auth`, `extra-repos`, `smoke-test`, `smoke-test-platform` |
 | [Helm Chart Package](.github/workflows/helm-chart-package.yml) | Lint, package and push a Helm chart to an OCI registry. The Helm version comes from `.devcontainer/devcontainer.json`; chart testing can use lint, KIND-backed install or skip mode. | `tag` (required), `image-registry` (required), `image-repository` (required), `chart-registry` (required), `chart-repository` (required), `runs-on`, `tag-override`, `chart-path`, `is-library-chart`, `set-chart-app-version`, `has-image`, `push-chart`, `chart-registry-username`, `chart-dependency-name`, `chart-testing-cli-command`, `chart-testing-cli-version` |
 | [GitOps Helm Update](.github/workflows/gitops-helm-update.yml) | Update image and chart coordinates in ArgoCD Helm manifests, then optionally commit them to a GitOps repository. Requires `GH_PAT_GITOPS`. | `manifest-paths` (required), `tag` (required), `namespace` (required), `image-registry` (required), `image-repository` (required), `gitops-repo` (required), `runs-on`, `tag-override`, chart coordinates, Git controls, `devcontainer-path`, `environment` |
-| [GitOps Manifest Update](.github/workflows/gha-gitops-manifest-update.yml) | Update image and optional chart coordinates in Kubernetes manifests via [f2calv/gha-gitops-manifest-update](https://github.com/f2calv/gha-gitops-manifest-update), then optionally commit them. | `tag` (required), `image-registry` (required), `image-repository` (required), `manifest-paths` (required), `namespace` (required), `runs-on`, `tag-override`, chart coordinates, `devcontainer-path`, Git repository and commit controls |
 | [Package Cleanup](.github/workflows/package-cleanup.yml) | Prune old container and Helm chart versions from ghcr.io via [dataaxiom/ghcr-cleanup-action](https://github.com/dataaxiom/ghcr-cleanup-action). Keeps the N most-recent tagged versions, deletes untagged orphans, and protects excluded tags. Defaults to dry-run. | `packages` (required), `runs-on`, `keep-n-tagged`, `exclude-tags`, `older-than`, `delete-untagged`, `dry-run` |
 
 Container defaults: context `.`, `dockerfile: Dockerfile`, `platform: linux/amd64,linux/arm64,linux/arm/v7`,
@@ -138,12 +137,11 @@ pins the chart-testing image, default `v3.15.0`. The registry password is always
 `GITHUB_TOKEN`. Inputs are validated before use, and OCI coordinates and the image tag are
 lowercased to match the published image; an invalid value fails the job.
 
-Both GitOps wrappers check out the target repository and call the same manifest-update Action.
+The GitOps workflow checks out the target repository and calls the manifest-update Action, which
+validates that each Argo CD chart renders and commits only the updated manifests.
 `gitops-repo-update: false` disables Git commit/push operations, not the manifest edits.
 `gitops-repo-branch` is forwarded to the Action, not checkout's `ref`; configure the target
-carefully. The older `gha-gitops-manifest-update.yml` reads `GH_PAT_GITOPS` without declaring
-it under `workflow_call.secrets`, so pass it with `secrets: inherit` rather than as an
-explicit named secret. Both wrappers ignore `chart-registry-password` and use `GITHUB_TOKEN`.
+carefully. The chart registry password is always the caller's `GITHUB_TOKEN`.
 `manifest-paths` is a space-separated list of YAML paths, not a JSON array.
 
 Cleanup's `packages` is a comma-separated list without the owner, such as
@@ -170,12 +168,6 @@ when you require major-only Action aliases. See its [documented limitation](http
 | --- | --- | --- |
 | [Lint](.github/workflows/lint.yml) | Run [pre-commit](https://pre-commit.com/) hooks against all files in the repository, caching hook environments by configuration. | `runs-on`, `pre-commit-version` |
 
-### Diagnostics
-
-| Workflow | Description | Key Inputs |
-| --- | --- | --- |
-| [Input Expression Test](.github/workflows/test.yml) | Diagnostic boolean-expression experiment, not application validation. No checkout or external actions. | `runs-on`, `test-true` (`true`); `test-false` is dispatch-only, defaults to `true`, and is unused |
-
 ## Permissions and Secrets
 
 Callers must grant at least the permissions the callee needs: nested workflows cannot elevate
@@ -190,12 +182,10 @@ that select an environment, subject to its protection rules.
 | Container image build | `contents: read`, `packages: write` for GHCR push (`read` for private pulls) | Uses `GITHUB_TOKEN` for login; no separate registry secret contract |
 | Helm chart package | `contents: read`, `packages: write` (callee declares both, even with `push-chart: false`) | Uses `GITHUB_TOKEN` as chart password; set `chart-registry-username` |
 | GitOps Helm update | `contents: read`, `packages: read` | Required declared `GH_PAT_GITOPS` with target-repository read/write access for checkout and commits |
-| Older GitOps manifest update | `contents: read`, `packages: read` when needed | Inherited `GH_PAT_GITOPS`; target write access if update enabled |
 | Package cleanup | `packages: write` | Default token must administer the target owner's packages |
 | Release calculation / publication | `contents: read` / `contents: write` | Automatic token; full authenticated history is checked out internally |
 | Terraform | `contents: read`, `id-token: write` (callee declares both even for validate) | For Azure operations: `ARM_TENANT_ID`, `ARM_SUBSCRIPTION_ID`, `ARM_CLIENT_ID`; additionally `ARM_CLIENT_SECRET` when `use-oidc: false` |
 | MAUI Android | `contents: read` | With `deploy: true`, inherit `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD`, `GOOGLE_PLAY_SERVICE_ACCOUNT_JSON` |
-| Input-expression diagnostic | None beyond the caller's chosen baseline | None |
 
 MAUI's signing secrets are consumed but not declared by `workflow_call`; use `secrets: inherit`.
 Unsigned MAUI validation needs no signing credentials. Container, Helm, GitOps and MAUI workflows
@@ -359,17 +349,6 @@ flowchart LR
     class A2 f2calv
 ```
 
-### _gha-gitops-manifest-update
-
-```mermaid
-flowchart LR
-    classDef f2calv fill:#dbeafe,stroke:#2563eb,color:#1e3a5f
-    W(["_gha-gitops-manifest-update"]) --> J["gha-gitops-manifest-update"]
-    J --> A1["actions/checkout@v7"]
-    J --> A2["f2calv/gha-gitops-manifest-update@v2"]
-    class A2 f2calv
-```
-
 ### _package-cleanup
 
 ```mermaid
@@ -398,14 +377,6 @@ flowchart LR
     W(["_lint"]) --> J["lint"]
     J --> A1["actions/checkout@v7"]
     J --> A2["actions/cache@v6"]
-```
-
-### _test
-
-```mermaid
-flowchart LR
-    classDef f2calv fill:#dbeafe,stroke:#2563eb,color:#1e3a5f
-    W(["_test"]) --> J["test"]
 ```
 
 ## Self-Tests

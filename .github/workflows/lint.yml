@@ -12,9 +12,13 @@ on:
         type: string
         default: 4.6.2
 
+permissions: {}
+
 jobs:
   lint:
     runs-on: ${{ inputs.runs-on }}
+    permissions:
+      contents: read
     env:
       PRE_COMMIT_VERSION: ${{ inputs.pre-commit-version }}
     steps:

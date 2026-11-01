@@ -62,9 +62,13 @@ on:
           Each element: {"repo":"owner/name","ref":"main","path":"deps/name"}
         default: '[]'
 
+permissions: {}
+
 jobs:
   app-build-dotnet:
     runs-on: ${{ inputs.runs-on }}
+    permissions:
+      contents: read
     #Inputs are free text, so scripts only ever read them as quoted environment variables.
     env:
       VERSION: ${{ inputs.version }}
