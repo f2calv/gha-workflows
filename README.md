@@ -94,7 +94,7 @@ must actually have read access; the default token does not automatically grant a
 
 | Workflow | Description | Key Inputs |
 | --- | --- | --- |
-| [Terraform](.github/workflows/terraform.yml) | Backend-free `validate`, or Azure-backed `plan`, `apply`, `plan+apply`, `destroy`. A plan artifact can be consumed by another job in the same workflow run; no cross-run artifact ID is accepted. | `working-directory` (required), `runs-on`, `command` (`plan`), `terraform-version` (`1.13.3`), `environment`, `environment-files`, `backend-config`, `backend-config-file`, `azure-backend-key`, `var-file`, `azure-login` (`true`), `use-oidc` (`true`), `artifact-name` (`tfplan`), `log-level` (`ERROR`), `deployment-version`, `deployment-commit`, `deployment-layer`, `lock-id`, `state-rm`, `expected-release-tag`, `readme-path` (`README.md`) |
+| [Terraform](.github/workflows/terraform.yml) | Backend-free `validate` or `test`, or Azure-backed `plan`, `apply`, `plan+apply`, `destroy`. A plan artifact can be consumed by another job in the same workflow run; no cross-run artifact ID is accepted. | `working-directory` (required), `runs-on`, `command` (`plan`), `terraform-version` (`1.13.3`), `environment`, `environment-files`, `backend-config`, `backend-config-file`, `azure-backend-key`, `var-file`, `azure-login` (`true`), `use-oidc` (`true`), `artifact-name` (`tfplan`), `log-level` (`ERROR`), `deployment-version`, `deployment-commit`, `deployment-layer`, `lock-id`, `state-rm`, `expected-release-tag`, `readme-path` (`README.md`) |
 
 Terraform environment files contain scalar top-level key/value pairs, separated by newlines;
 later files override earlier ones. Backend settings are one `key=value` per line; backend and
@@ -147,6 +147,14 @@ Cleanup's `packages` is a comma-separated list without the owner, such as
 delete untagged versions, omit an age filter and use `dry-run: true`. Excluded tag patterns
 take precedence; opt out of dry-run only when the caller intends real deletion.
 
+### NuGet Libraries
+
+| Workflow | Description | Key Inputs |
+| --- | --- | --- |
+| [.NET NuGet Library](.github/workflows/dotnet-nuget-library.yml) | Complete library CI: lint, versioning, build/test/pack/push through [gha-dotnet-nuget](https://github.com/f2calv/gha-dotnet-nuget), then a `major.minor.patch` release when none exists. Test services are not supported yet. | `runs-on`, `solution-name`, `configuration`, `execute-tests`, `code-coverage`, `dotnet-test-args`, `dotnet-restore-args`, `push-preview`, `package-filter`, `nuget-user`, `release` (`true`) |
+
+Call it as the only job and grant the union of its permissions: `contents: write`, `id-token: write` and `packages: write`.
+
 ### Release & Versioning
 
 | Workflow | Description | Key Inputs |
@@ -164,6 +172,8 @@ when you require major-only Action aliases. See its [documented limitation](http
 
 | Workflow | Description | Key Inputs |
 | --- | --- | --- |
+| [Helm Lint](.github/workflows/helm-lint.yml) | `helm dependency build` and `helm lint` each chart, then lint it against every `ci/*-values.yaml` fixture. The Helm version comes from `.devcontainer/devcontainer.json` unless overridden. | `charts` (required JSON array), `runs-on`, `require-ci-values` (`true`), `helm-version`, `devcontainer-path` |
+| [README Reference Check](.github/workflows/readme-ref-check.yml) | Fail when the README does not reference the exact floating major tag, so `@v2.1` cannot satisfy `@v2`. The default pattern matches the calling repository as an Action (`owner/action@vN`). | `major` (required), `runs-on`, `reference-prefix`, `readme-path` |
 | [Lint](.github/workflows/lint.yml) | Run [pre-commit](https://pre-commit.com/) hooks against all files in the repository, caching hook environments by configuration. | `runs-on`, `pre-commit-version` |
 
 ## Permissions and Secrets
@@ -176,13 +186,14 @@ that select an environment, subject to its protection rules.
 
 | Workflow | Caller token permissions | Additional credentials |
 | --- | --- | --- |
-| .NET, Go, Python, Rust builds; EF drift; lint | `contents: read` | None for ordinary public source; extra repository reads need actual repository access |
+| .NET, Go, Python, Rust builds; EF drift; lint; Helm lint; README check | `contents: read` | None for ordinary public source; extra repository reads need actual repository access |
 | Container image build | `contents: read`, `packages: write` for GHCR push (`read` for private pulls) | Uses `GITHUB_TOKEN` for login; no separate registry secret contract |
 | Helm chart package | `contents: read`, `packages: write` (callee declares both, even with `push-chart: false`) | Uses `GITHUB_TOKEN` as chart password; set `chart-registry-username` |
 | GitOps Helm update | `contents: read`, `packages: read` | Required declared `GH_PAT_GITOPS` with target-repository read/write access for checkout and commits |
 | Package cleanup | `packages: write` | Default token must administer the target owner's packages |
 | Release calculation / publication | `contents: read` / `contents: write` | Automatic token; full authenticated history is checked out internally |
-| Terraform | `contents: read`, `id-token: write` (callee declares both even for validate) | For Azure operations: `ARM_TENANT_ID`, `ARM_SUBSCRIPTION_ID`, `ARM_CLIENT_ID`; additionally `ARM_CLIENT_SECRET` when `use-oidc: false` |
+| Terraform | `contents: read`, `id-token: write` (validated at startup for every command, including `validate` and `test`) | For Azure operations: `ARM_TENANT_ID`, `ARM_SUBSCRIPTION_ID`, `ARM_CLIENT_ID`; additionally `ARM_CLIENT_SECRET` when `use-oidc: false` |
+| .NET NuGet library | `contents: write`, `id-token: write`, `packages: write` | Automatic token; nuget.org Trusted Publishing when `nuget-user` is set |
 | MAUI Android | `contents: read` | With `deploy: true`, map the declared `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD` and `GOOGLE_PLAY_SERVICE_ACCOUNT_JSON` secrets |
 
 MAUI signing secrets reach MSBuild as environment variables, never as command-line properties.
@@ -369,6 +380,35 @@ graph LR
     class A2 f2calv
 ```
 
+### _helm-lint
+
+```mermaid
+graph LR
+    classDef f2calv fill:#dbeafe,stroke:#2563eb,color:#1e3a5f
+    W(["_helm-lint"]) --> J["helm (chart)"]
+    J --> A1["actions/checkout@v7"]
+    J --> A2["azure/setup-helm@v5"]
+```n
+### _readme-ref-check
+
+```mermaid
+graph LR
+    classDef f2calv fill:#dbeafe,stroke:#2563eb,color:#1e3a5f
+    W(["_readme-ref-check"]) --> J["readme-ref-check"]
+    J --> A1["actions/checkout@v7"]
+```n
+### _dotnet-nuget-library
+
+```mermaid
+graph LR
+    classDef f2calv fill:#dbeafe,stroke:#2563eb,color:#1e3a5f
+    W(["_dotnet-nuget-library"]) --> L(["_lint"])
+    W --> V(["_gha-release-versioning"])
+    W --> J["build"]
+    J --> A1["f2calv/gha-dotnet-nuget@v2"]
+    W --> R(["_gha-release-versioning (release)"])
+    class A1 f2calv
+```n
 ### _lint
 
 ```mermaid
@@ -392,7 +432,11 @@ fixtures in [tests/fixtures](tests/fixtures), before a release moves the floatin
 | `app-build-rust.yml` | Cargo binary with a unit test | `working-directory`, toolchain setup, fmt, Clippy, build and tests |
 | `app-build-python.yml` | Locked uv package | Lockfile check, Ruff, mypy, pytest and `uv build` |
 | `app-build-go.yml` | Go module outside the repository root | `working-directory`, vet, staticcheck, build and race tests |
-| `terraform.yml` | Root module with one output | Backend-free `validate` and `fmt` |
+| `terraform.yml` | Root module with one output and a test file | Backend-free `validate`, `fmt` and `terraform test` |
+| `helm-lint.yml` | The chart fixture and its `ci/` values | Devcontainer Helm version, dependency build and fixture lint |
+| `dotnet-nuget-library.yml` | The .NET fixture with `release: false` | Nested lint, versioning and gha-dotnet-nuget build and tests |
+| `readme-ref-check.yml` | This README | The floating major reference for this repository's workflows |
+| `devcontainer-tool-versions` action | This repository's devcontainer | Helm and yq versions read without modifying the file |
 | `ef-migrations-drift.yml` | Model-less EF Core context with a design-time factory | Tool restore and the pending-model-changes check |
 | `clone-extra-repos` action | Two public repositories | Ref and default-branch clones without persisted credentials |
 
@@ -406,6 +450,10 @@ from a caller.
 in an `extra-repos` JSON array. Its token is sent as a per-command header, so it never reaches a
 remote URL or `.git/config` that a container build context could copy. An omitted `ref` clones the
 default branch.
+
+[devcontainer-tool-versions](.github/actions/devcontainer-tool-versions/action.yml) reads the
+`helm` and `yq` versions pinned in a JSONC `devcontainer.json` into outputs, from a temporary copy so
+the checkout is never modified.
 
 ## Companion Actions
 

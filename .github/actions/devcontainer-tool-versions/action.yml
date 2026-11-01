@@ -1,0 +1,25 @@
+name: Devcontainer tool versions
+description: Read pinned tool versions from a devcontainer.json without modifying it.
+
+inputs:
+  path:
+    description: devcontainer.json path e.g. .devcontainer/devcontainer.json
+    default: .devcontainer/devcontainer.json
+
+outputs:
+  helm:
+    description: Helm version from the kubectl-helm-minikube feature e.g. 3.20.2
+    value: ${{ steps.read.outputs.helm }}
+  yq:
+    description: yq version from the jq-likes feature e.g. latest
+    value: ${{ steps.read.outputs.yq }}
+
+runs:
+  using: composite
+  steps:
+    - name: read tool versions
+      id: read
+      shell: bash
+      env:
+        DEVCONTAINER_PATH: ${{ inputs.path }}
+      run: bash "$GITHUB_ACTION_PATH/.scripts/read-tool-versions.sh"

@@ -1,0 +1,85 @@
+name: _helm-lint
+
+on:
+  workflow_call:
+    inputs:
+      runs-on:
+        type: string
+        description: Runner label, e.g. ubuntu-24.04-arm for a native arm64 build.
+        default: ubuntu-24.04
+      charts:
+        type: string
+        description: JSON array of chart directories e.g. ["charts/my-app"]
+        required: true
+      #Representative values live under each chart's ci/ folder, matching chart-testing.
+      require-ci-values:
+        type: boolean
+        description: Fail when a chart has no ci/*-values.yaml fixtures.
+        default: true
+      #Empty reads the kubectl-helm-minikube feature's helm version from devcontainer-path.
+      helm-version:
+        type: string
+        description: Helm version override e.g. 3.20.2
+        default: ''
+      devcontainer-path:
+        type: string
+        description: devcontainer.json path e.g. .devcontainer/devcontainer.json
+        default: .devcontainer/devcontainer.json
+
+permissions: {}
+
+jobs:
+  helm:
+    name: helm (${{ matrix.chart }})
+    runs-on: ${{ inputs.runs-on }}
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        chart: ${{ fromJSON(inputs.charts) }}
+    env:
+      CHART: ${{ matrix.chart }}
+      REQUIRE_CI_VALUES: ${{ inputs.require-ci-values }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: read helm version
+        id: helm-version
+        env:
+          HELM_VERSION: ${{ inputs.helm-version }}
+          DEVCONTAINER_PATH: ${{ inputs.devcontainer-path }}
+        run: |
+          set -euo pipefail
+          if [[ -z "$HELM_VERSION" ]]; then
+            HELM_VERSION=$(npx --yes json5@2 "$DEVCONTAINER_PATH" | jq -r '[.features[] | objects | .helm // empty] | first // ""')
+          fi
+          [[ "$HELM_VERSION" =~ ^(latest|v?[0-9]+(\.[0-9]+){0,2})$ ]] || { echo "::error::No usable helm version: '$HELM_VERSION'."; exit 1; }
+          echo "version=$HELM_VERSION" | tee -a "$GITHUB_OUTPUT"
+
+      - uses: azure/setup-helm@v5
+        with:
+          version: ${{ steps.helm-version.outputs.version }}
+
+      - name: helm dependency build
+        run: helm dependency build "$CHART"
+
+      - name: helm lint
+        run: helm lint "$CHART"
+
+      - name: helm lint with ci values
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          fixtures=("$CHART"/ci/*-values.yaml)
+          if [[ ${#fixtures[@]} -eq 0 ]]; then
+            if [[ "$REQUIRE_CI_VALUES" == "true" ]]; then
+              echo "::error::$CHART has no ci/*-values.yaml fixtures."
+              exit 1
+            fi
+            echo "No ci/*-values.yaml fixtures in $CHART."
+            exit 0
+          fi
+          for fixture in "${fixtures[@]}"; do
+            helm lint "$CHART" --values "$fixture"
+          done
