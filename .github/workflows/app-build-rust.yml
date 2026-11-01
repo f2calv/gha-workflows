@@ -7,10 +7,19 @@ on:
         type: string
         description: Runner label, e.g. ubuntu-24.04-arm for a native arm64 build.
         default: ubuntu-24.04
+      #Exported to every Cargo step as VERSION, e.g. for option_env!("VERSION") in the crate.
       version:
         type: string
         description: e.g. 1.2.301-feature-my-feature.12+56
         required: true
+      working-directory:
+        type: string
+        description: Cargo project directory e.g. src/my-app
+        default: .
+      execute-tests:
+        type: boolean
+        description: Run cargo test.
+        default: true
 
 permissions: {}
 
@@ -19,10 +28,22 @@ jobs:
     runs-on: ${{ inputs.runs-on }}
     permissions:
       contents: read
+    defaults:
+      run:
+        working-directory: ${{ inputs.working-directory }}
+    env:
+      VERSION: ${{ inputs.version }}
     steps:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
+
+      #Honours rust-toolchain.toml when present and caches the Cargo registry and target directory.
+      - uses: actions-rust-lang/setup-rust-toolchain@v2
+        with:
+          components: rustfmt, clippy
+          cache-workspaces: ${{ inputs.working-directory }}
+          rust-src-dir: ${{ inputs.working-directory }}
 
       - name: cargo version
         run: cargo version
@@ -38,3 +59,7 @@ jobs:
 
       - name: cargo build
         run: cargo build --release
+
+      - name: cargo test
+        if: inputs.execute-tests
+        run: cargo test --release

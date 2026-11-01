@@ -1,56 +1,49 @@
 name: _gha-release-versioning
-#Note: Workflow is called by other workflows to a) determine a semantic version, b) tag the repo with this create a semantic version and c) create a release.
+#Determines a semantic version and, when requested, tags the commit and creates a GitHub Release.
 
 on:
-  workflow_dispatch:
   workflow_call:
     inputs:
       runs-on:
         type: string
         description: Runner label, e.g. ubuntu-24.04-arm for a native arm64 build.
         default: ubuntu-24.04
-      # GITHUB_TOKEN:
-      #   description: e.g. USD{{ secrets.GITHUB_TOKEN }}
-      #   required: true
-      #   type: string
-      #Note: We don't need to pass in GITHUB_TOKEN to a reusable workflow. When a reusable workflow is triggered by a caller workflow, the github context is always associated with the caller workflow. The called workflow is automatically granted access to github.token and secrets.GITHUB_TOKEN.
-      #see https://docs.github.com/en/actions/using-workflows/reusing-workflows
       semVer:
-        description: Pass in an externally generated semantic version, if empty then uses GitVersion.
+        description: Externally calculated version e.g. 1.2.3; empty runs GitVersion
         required: false
         type: string
         default: ''
       tag-prefix:
-        description: Prefix the semver, e.g. 1.0.1 or v1.0.1
+        description: Tag prefix e.g. v, empty or component/
         required: false
         type: string
         default: v
       move-major-tag:
-        description: Create and/or move major version tag, e.g. when creating v1.0.2 then move v1 tag up from the v1.0.1 commit.
+        description: Move the floating major and minor alias tags
         required: false
         type: boolean
         default: true
       tag-and-release:
-        description: Create the full version tag and corresponding GitHub Release unless tag-only is true.
+        description: Create the version tag and GitHub Release
         required: false
         type: boolean
         default: true
       tag-only:
-        description: Create only the full version tag; takes precedence over tag-and-release.
+        description: Create only the version tag; overrides tag-and-release
         required: false
         type: boolean
         default: false
       release-branch:
-        description: Branch allowed to create tags and releases; empty uses the repository default branch.
+        description: Branch allowed to release; empty uses the default branch
         required: false
         type: string
         default: ''
       gv-config:
-        description: Configuration filename that GitVersion will use.
+        description: GitVersion configuration file e.g. GitVersion.yml
         type: string
         default: GitVersion.yml
       gv-source:
-        description: Choose an installation source for GitVersion, options include container, dotnet & actions.
+        description: GitVersion source e.g. actions, dotnet or container
         type: string
         default: actions
     outputs:
@@ -70,6 +63,7 @@ on:
         description: e.g. true or false
         value: ${{ jobs.gha-release-versioning.outputs.release-exists }}
 
+#No permissions block: versioning callers grant contents read, releasing callers contents write.
 jobs:
   gha-release-versioning:
     runs-on: ${{ inputs.runs-on }}

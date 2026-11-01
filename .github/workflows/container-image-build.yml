@@ -70,6 +70,12 @@ on:
           JSON array of extra repositories to clone into the Docker build context.
           Each element: {"repo":"owner/name","ref":"main","path":"deps/name"}
         default: '[]'
+      #Shares layers between runs through the repository's Actions cache, scoped per image repository.
+      #The cache is limited per repository and evicted least-recently-used, so opt in deliberately.
+      buildkit-cache:
+        type: boolean
+        description: Cache BuildKit layers in the GitHub Actions cache.
+        default: false
       #Runs against the loaded image before the multi-architecture build, which is the only point the
       #image exists locally; a multi-platform result cannot be loaded into the docker image store.
       #The image reference is exported as IMAGE. Empty skips the test entirely.
@@ -109,6 +115,7 @@ jobs:
       ATTESTATIONS: ${{ inputs.attestations }}
       SMOKE_TEST: ${{ inputs.smoke-test }}
       SMOKE_TEST_PLATFORM: ${{ inputs.smoke-test-platform }}
+      BUILDKIT_CACHE: ${{ inputs.buildkit-cache }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -173,6 +180,10 @@ jobs:
           REGISTRY_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: docker login "$REGISTRY" -u "$GITHUB_ACTOR" --password-stdin <<< "$REGISTRY_TOKEN"
 
+      #Exposes the Actions cache credentials to buildx, which a plain run step cannot see.
+      - uses: crazy-max/ghaction-github-runtime@v4
+        if: inputs.buildkit-cache
+
       - name: docker buildx build/push
         env:
           BUILDX_NO_DEFAULT_ATTESTATIONS: 1 #Note: fixes publishing container architecture 'unknown/unknown'
@@ -205,6 +216,13 @@ jobs:
           #Split on whitespace only: no globbing, quote parsing or expansion of caller text.
           read -r -d '' -a ARGS <<< "$BUILD_ARGS" || true
 
+          CACHE_FROM=()
+          CACHE_TO=()
+          if [[ "$BUILDKIT_CACHE" == "true" ]]; then
+            CACHE_FROM=(--cache-from "type=gha,scope=$REPOSITORY")
+            CACHE_TO=(--cache-to "type=gha,mode=max,scope=$REPOSITORY")
+          fi
+
           PUSH_ARGS=()
           if [[ "$PUSH_IMAGE" == "true" ]]; then
             PUSH_ARGS+=(--push)
@@ -228,7 +246,7 @@ jobs:
             #the caller's args must be passed here too, or the smoke test runs against a different
             #image than the one published, and the build below misses the cache on every layer after
             #the first differing build-arg
-            build --load --platform "$SMOKE_TEST_PLATFORM" -t "$IMAGE" "${ARGS[@]}"
+            build --load --platform "$SMOKE_TEST_PLATFORM" -t "$IMAGE" "${CACHE_FROM[@]}" "${ARGS[@]}"
             echo "::endgroup::"
 
             echo "::group::smoke test"
@@ -237,4 +255,4 @@ jobs:
           fi
 
           #reuses the builder above, so the smoke test platform is already cached rather than rebuilt
-          build "${TAGS[@]}" --platform "$PLATFORM" "${ARGS[@]}" "${PUSH_ARGS[@]}"
+          build "${TAGS[@]}" --platform "$PLATFORM" "${CACHE_FROM[@]}" "${CACHE_TO[@]}" "${ARGS[@]}" "${PUSH_ARGS[@]}"

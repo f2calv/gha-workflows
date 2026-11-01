@@ -36,9 +36,7 @@ jobs:
 
 Replace `Example.slnx` with your solution and provide `GitVersion.yml` in the caller. Tests require `global.json` selecting Microsoft.Testing.Platform and compatible test projects. Jobs calling reusable workflows do not also declare `steps` or `runs-on`; override the workflow's `runs-on` input instead. See [GitHub's reusable-workflow guidance](https://docs.github.com/en/actions/using-workflows/reusing-workflows).
 
-The existing published `@v1` reference and immutable [v1.8.8 release](https://github.com/f2calv/gha-workflows/releases/tag/v1.8.8) were verified on 20 October 2026. You may replace `@v1` with `@v1.8.8` to lock that historical workflow implementation. Although it is not a Marketplace Action, this collection is released like one: immutable `vX.Y.Z` tags plus floating `vMAJOR` and `vMAJOR.MINOR` aliases.
-
-Contracts below describe the current checkout. Compared with `v1.8.8`, it adds build-context properties and removes Helm environment injection; the release wrapper no longer exposes `tag-only` or `release-branch`. Use the [Action directly](https://github.com/f2calv/gha-release-versioning) when those controls are needed.
+Although it is not a Marketplace Action, this collection is released like one: immutable `vX.Y.Z` tags plus floating `vMAJOR` and `vMAJOR.MINOR` aliases. Replace `@v1` with an exact `@vX.Y.Z` tag from the [releases](https://github.com/f2calv/gha-workflows/releases) to lock one implementation.
 
 ## Workflows
 
@@ -48,8 +46,8 @@ Contracts below describe the current checkout. Compared with `v1.8.8`, it adds b
 | --- | --- | --- |
 | [App Build .NET](.github/workflows/app-build-dotnet.yml) | Restore, workload restore, build and test a .NET solution/project. Installs .NET 8/9/10 SDKs. Optionally collects coverage, provisions selected Compose services and clones extra repositories into the build context. | `version` (required), `runs-on`, `solution-name`, `configuration`, `execute-tests`, `test-solution-name`, `dotnet-restore-args`, `dotnet-build-args`, `dotnet-test-args`, `collect-coverage`, `coverage-artifact-name`, `test-compose-file`, `test-compose-services`, `extra-repos` |
 | [App Build Go](.github/workflows/app-build-go.yml) | Check formatting and modules, run `go vet`, staticcheck, build and test a Go module. The toolchain version comes from `go.mod`. | `version` (required), `runs-on`, `go-version-file`, `working-directory`, `package`, `ldflags` |
-| [App Build Python](.github/workflows/app-build-python.yml) | Validate the uv lockfile, restore all dependency groups, run Ruff, mypy and pytest, then build the Python package. Its required `version` input is currently unused. | `version` (required), `runs-on` |
-| [App Build Rust](.github/workflows/app-build-rust.yml) | Check formatting, run Clippy, fetch dependencies and build a Rust project; does not run Cargo tests or inject its required `version`. | `version` (required), `runs-on` |
+| [App Build Python](.github/workflows/app-build-python.yml) | Validate the uv lockfile, restore all dependency groups, run Ruff, mypy and pytest, then build the Python package. `version` is exported to every step as `VERSION`. | `version` (required), `runs-on`, `working-directory` |
+| [App Build Rust](.github/workflows/app-build-rust.yml) | Install the toolchain (honouring `rust-toolchain.toml`) with caching, check formatting, run Clippy, build and test a Rust project. `version` is exported to every Cargo step as `VERSION`. | `version` (required), `runs-on`, `working-directory`, `execute-tests` |
 
 `dotnet-restore-args` and `dotnet-build-args` are split on whitespace only, like the container
 `args`. `dotnet-test-args` is a JSON array so each argument remains distinct. For example,
@@ -72,7 +70,7 @@ test projects to reference `Microsoft.Testing.Extensions.CodeCoverage`; the work
 
 Go uses `go.mod` by default, `working-directory: .`, `package: ./...`, `ldflags: ''`, injects `main.version`,
 and runs race-enabled tests. Python expects a locked uv project containing Ruff, mypy and pytest.
-Rust expects Cargo/rustfmt/Clippy on the selected runner; it installs no toolchain.
+Rust installs its toolchain with rustfmt and Clippy, caches the Cargo registry and target directory, and runs `cargo test --release` unless `execute-tests: false`.
 
 Where supported, `extra-repos` is a JSON array of objects with `repo`, `ref`, and `path`,
 for example `[{"repo":"example/dependency","ref":"main","path":"deps/dependency"}]`.
@@ -110,13 +108,13 @@ controls, not ordinary validation inputs; `destroy` auto-approves.
 
 | Workflow | Description | Key Inputs |
 | --- | --- | --- |
-| [Container Image Build](.github/workflows/container-image-build.yml) | Multi-architecture buildx build and optional push; optional single-platform smoke test before the final build. Uses the caller's GitHub token for registry login, not independent ACR/Docker Hub credentials. No existing-tag conflict check enforces immutability. | `registry` (required), `tag` (required), `runs-on`, `repository`, `repository-prefix`, `dockerfile`, `default-branch-tag`, `feature-branch-tag`, `platform`, `args`, `default-branch`, `push-image`, `attestations`, `github-private-packages-auth`, `extra-repos`, `smoke-test`, `smoke-test-platform` |
+| [Container Image Build](.github/workflows/container-image-build.yml) | Multi-architecture buildx build and optional push; optional single-platform smoke test before the final build. Uses the caller's GitHub token for registry login, not independent ACR/Docker Hub credentials. No existing-tag conflict check enforces immutability. | `registry` (required), `tag` (required), `runs-on`, `repository`, `repository-prefix`, `dockerfile`, `buildkit-cache`, `default-branch-tag`, `feature-branch-tag`, `platform`, `args`, `default-branch`, `push-image`, `attestations`, `github-private-packages-auth`, `extra-repos`, `smoke-test`, `smoke-test-platform` |
 | [Helm Chart Package](.github/workflows/helm-chart-package.yml) | Lint, package and push a Helm chart to an OCI registry. The Helm version comes from `.devcontainer/devcontainer.json`; chart testing can use lint, KIND-backed install or skip mode. | `tag` (required), `image-registry` (required), `image-repository` (required), `chart-registry` (required), `chart-repository` (required), `runs-on`, `tag-override`, `chart-path`, `is-library-chart`, `set-chart-app-version`, `has-image`, `push-chart`, `chart-registry-username`, `chart-dependency-name`, `chart-testing-cli-command`, `chart-testing-cli-version` |
 | [GitOps Helm Update](.github/workflows/gitops-helm-update.yml) | Update image and chart coordinates in ArgoCD Helm manifests, then optionally commit them to a GitOps repository. Requires `GH_PAT_GITOPS`. | `manifest-paths` (required), `tag` (required), `namespace` (required), `image-registry` (required), `image-repository` (required), `gitops-repo` (required), `runs-on`, `tag-override`, chart coordinates, Git controls, `devcontainer-path`, `environment` |
 | [Package Cleanup](.github/workflows/package-cleanup.yml) | Prune old container and Helm chart versions from ghcr.io via [dataaxiom/ghcr-cleanup-action](https://github.com/dataaxiom/ghcr-cleanup-action). Keeps the N most-recent tagged versions, deletes untagged orphans, and protects excluded tags. Defaults to dry-run. | `packages` (required), `runs-on`, `keep-n-tagged`, `exclude-tags`, `older-than`, `delete-untagged`, `dry-run` |
 
 Container defaults: context `.`, `dockerfile: Dockerfile`, `platform: linux/amd64,linux/arm64,linux/arm/v7`,
-`push-image: true`, `attestations: false`, `default-branch: refs/heads/main`, alias tags
+`push-image: true`, `attestations: false`, `buildkit-cache: false`, `default-branch: refs/heads/main`, alias tags
 `latest` / `latest-dev`, and `smoke-test-platform: linux/amd64`. The default repository is
 the lowercased caller repository name **without the owner**; supply a full
 `repository: ${{ github.repository }}` for GHCR. Registry login still runs with `push-image: false`.
@@ -240,7 +238,7 @@ Mermaid diagrams showing the action dependency chain for each workflow. Actions 
 ### _app-build-dotnet
 
 ```mermaid
-flowchart LR
+graph LR
     classDef f2calv fill:#dbeafe,stroke:#2563eb,color:#1e3a5f
     W(["_app-build-dotnet"]) --> J["app-build-dotnet"]
     J --> A1["actions/checkout@v7"]
@@ -253,7 +251,7 @@ flowchart LR
 ### _app-build-go
 
 ```mermaid
-flowchart LR
+graph LR
     classDef f2calv fill:#dbeafe,stroke:#2563eb,color:#1e3a5f
     W(["_app-build-go"]) --> J["app-build-go"]
     J --> A1["actions/checkout@v7"]
@@ -264,26 +262,27 @@ flowchart LR
 ### _app-build-python
 
 ```mermaid
-flowchart LR
+graph LR
     classDef f2calv fill:#dbeafe,stroke:#2563eb,color:#1e3a5f
     W(["_app-build-python"]) --> J["app-build-python"]
     J --> A1["actions/checkout@v7"]
-    J --> A2["astral-sh/setup-uv@v10.1.0"]
+    J --> A2["astral-sh/setup-uv@v10.3.3"]
 ```
 
 ### _app-build-rust
 
 ```mermaid
-flowchart LR
+graph LR
     classDef f2calv fill:#dbeafe,stroke:#2563eb,color:#1e3a5f
     W(["_app-build-rust"]) --> J["app-build-rust"]
     J --> A1["actions/checkout@v7"]
+    J --> A2["actions-rust-lang/setup-rust-toolchain@v2"]
 ```
 
 ### _deploy-maui-android
 
 ```mermaid
-flowchart LR
+graph LR
     classDef f2calv fill:#dbeafe,stroke:#2563eb,color:#1e3a5f
     W(["_deploy-maui-android"]) --> J["build-and-deploy"]
     J --> A1["actions/checkout@v7"]
@@ -294,7 +293,7 @@ flowchart LR
 ### _ef-migrations-drift
 
 ```mermaid
-flowchart LR
+graph LR
     classDef f2calv fill:#dbeafe,stroke:#2563eb,color:#1e3a5f
     W(["_ef-migrations-drift"]) --> J["ef-migrations-drift"]
     J --> A1["actions/checkout@v7"]
@@ -306,7 +305,7 @@ flowchart LR
 ### _terraform
 
 ```mermaid
-flowchart LR
+graph LR
     classDef f2calv fill:#dbeafe,stroke:#2563eb,color:#1e3a5f
     W(["_terraform"]) --> J["terraform"]
     J --> A1["actions/checkout@v7"]
@@ -319,18 +318,19 @@ flowchart LR
 ### _container-image-build
 
 ```mermaid
-flowchart LR
+graph LR
     classDef f2calv fill:#dbeafe,stroke:#2563eb,color:#1e3a5f
     W(["_container-image-build"]) --> J["container-image-build"]
     J --> A1["actions/checkout@v7"]
     J --> A2["f2calv/gha-workflows/.github/actions/clone-extra-repos@v1"]
     class A2 f2calv
+    J --> A3["crazy-max/ghaction-github-runtime@v4 (optional cache)"]
 ```
 
 ### _helm-chart-package
 
 ```mermaid
-flowchart LR
+graph LR
     classDef f2calv fill:#dbeafe,stroke:#2563eb,color:#1e3a5f
     W(["_helm-chart-package"]) --> J["helm-chart-package"]
     J --> A1["actions/checkout@v7"]
@@ -341,7 +341,7 @@ flowchart LR
 ### _gitops-helm-update
 
 ```mermaid
-flowchart LR
+graph LR
     classDef f2calv fill:#dbeafe,stroke:#2563eb,color:#1e3a5f
     W(["_gitops-helm-update"]) --> J["update"]
     J --> A1["actions/checkout@v7"]
@@ -352,7 +352,7 @@ flowchart LR
 ### _package-cleanup
 
 ```mermaid
-flowchart LR
+graph LR
     classDef f2calv fill:#dbeafe,stroke:#2563eb,color:#1e3a5f
     W(["_package-cleanup"]) --> J["package-cleanup"]
     J --> A1["dataaxiom/ghcr-cleanup-action@v1"]
@@ -361,7 +361,7 @@ flowchart LR
 ### _gha-release-versioning
 
 ```mermaid
-flowchart LR
+graph LR
     classDef f2calv fill:#dbeafe,stroke:#2563eb,color:#1e3a5f
     W(["_gha-release-versioning"]) --> J["gha-release-versioning"]
     J --> A1["actions/checkout@v7"]
@@ -372,7 +372,7 @@ flowchart LR
 ### _lint
 
 ```mermaid
-flowchart LR
+graph LR
     classDef f2calv fill:#dbeafe,stroke:#2563eb,color:#1e3a5f
     W(["_lint"]) --> J["lint"]
     J --> A1["actions/checkout@v7"]
@@ -387,8 +387,10 @@ fixtures in [tests/fixtures](tests/fixtures), before a release moves the floatin
 | Workflow | Fixture | Exercises |
 | --- | --- | --- |
 | `app-build-dotnet.yml` | .NET library and xUnit v3 tests | Restore, build, Microsoft.Testing.Platform tests and coverage upload |
-| `container-image-build.yml` | Minimal multi-architecture image | Default platforms and the smoke test; never pushed |
+| `container-image-build.yml` | Minimal multi-architecture image | Default platforms, BuildKit cache and the smoke test; never pushed |
 | `helm-chart-package.yml` | Chart that owns an image value | Image rewriting, packaging and `ct lint`; never pushed |
+| `app-build-rust.yml` | Cargo binary with a unit test | `working-directory`, toolchain setup, fmt, Clippy, build and tests |
+| `app-build-python.yml` | Locked uv package | Lockfile check, Ruff, mypy, pytest and `uv build` |
 | `app-build-go.yml` | Go module outside the repository root | `working-directory`, vet, staticcheck, build and race tests |
 | `terraform.yml` | Root module with one output | Backend-free `validate` and `fmt` |
 | `ef-migrations-drift.yml` | Model-less EF Core context with a design-time factory | Tool restore and the pending-model-changes check |

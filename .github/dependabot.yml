@@ -32,3 +32,15 @@ updates:
     schedule:
       interval: weekly
       time: "04:00"
+
+  - package-ecosystem: cargo
+    directory: /tests/fixtures/rust
+    schedule:
+      interval: weekly
+      time: "04:00"
+
+  - package-ecosystem: uv
+    directory: /tests/fixtures/python
+    schedule:
+      interval: weekly
+      time: "04:00"
