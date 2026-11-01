@@ -84,7 +84,7 @@ must actually have read access; the default token does not automatically grant a
 
 | Workflow | Description | Key Inputs |
 | --- | --- | --- |
-| [Deploy MAUI Android](.github/workflows/_deploy-maui-android.yml) | Build the hard-coded `src/CasCap.App.Maui/CasCap.App.Maui.csproj` target `net10.0-android`, or sign and upload it to Google Play. This is not a generic configurable project path. | `runs-on`, `deploy` (`false`), `dotnet-version` (`10.0.x`), `configuration` (`Release`), `package-name`, `play-track` (`internal`), `app-display-version` (`1.0`), `app-version-code` (`1`) |
+| [Deploy MAUI Android](.github/workflows/deploy-maui-android.yml) | Publish a .NET MAUI Android app bundle, or sign it and upload it to Google Play. | `project` (required), `runs-on`, `target-framework` (`net10.0-android`), `deploy` (`false`), `dotnet-version` (`10.0.x`), `configuration` (`Release`), `package-name` (required to deploy), `play-track` (`internal`), `app-display-version` (`1.0`), `app-version-code` (`1`) |
 
 ### Database
 
@@ -185,9 +185,9 @@ that select an environment, subject to its protection rules.
 | Package cleanup | `packages: write` | Default token must administer the target owner's packages |
 | Release calculation / publication | `contents: read` / `contents: write` | Automatic token; full authenticated history is checked out internally |
 | Terraform | `contents: read`, `id-token: write` (callee declares both even for validate) | For Azure operations: `ARM_TENANT_ID`, `ARM_SUBSCRIPTION_ID`, `ARM_CLIENT_ID`; additionally `ARM_CLIENT_SECRET` when `use-oidc: false` |
-| MAUI Android | `contents: read` | With `deploy: true`, inherit `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD`, `GOOGLE_PLAY_SERVICE_ACCOUNT_JSON` |
+| MAUI Android | `contents: read` | With `deploy: true`, map the declared `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD` and `GOOGLE_PLAY_SERVICE_ACCOUNT_JSON` secrets |
 
-MAUI's signing secrets are consumed but not declared by `workflow_call`; use `secrets: inherit`.
+MAUI signing secrets reach MSBuild as environment variables, never as command-line properties.
 Unsigned MAUI validation needs no signing credentials. Container, Helm, GitOps and MAUI workflows
 skip Dependabot actors. Publication and Terraform state mutations are not universally event-gated:
 callers must restrict those jobs to trusted events and appropriate environments.
@@ -280,12 +280,12 @@ flowchart LR
     J --> A1["actions/checkout@v7"]
 ```
 
-### deploy-maui-android
+### _deploy-maui-android
 
 ```mermaid
 flowchart LR
     classDef f2calv fill:#dbeafe,stroke:#2563eb,color:#1e3a5f
-    W(["deploy-maui-android"]) --> J["build-and-deploy"]
+    W(["_deploy-maui-android"]) --> J["build-and-deploy"]
     J --> A1["actions/checkout@v7"]
     J --> A2["actions/setup-dotnet@v6"]
     J --> A3["r0adkll/upload-google-play@v1"]
