@@ -1,0 +1,142 @@
+name: _deploy-maui-android
+
+on:
+  workflow_call:
+    inputs:
+      runs-on:
+        type: string
+        description: Runner label, e.g. ubuntu-24.04-arm for a native arm64 build.
+        default: ubuntu-24.04
+      project:
+        type: string
+        description: MAUI app project e.g. src/MyApp/MyApp.csproj
+        required: true
+      target-framework:
+        type: string
+        description: Android target framework e.g. net10.0-android
+        default: net10.0-android
+      #false builds an unsigned bundle without touching any signing secret.
+      deploy:
+        type: boolean
+        description: Sign and upload to Google Play.
+        default: false
+      dotnet-version:
+        type: string
+        description: .NET SDK version e.g. 10.0.x
+        default: 10.0.x
+      configuration:
+        type: string
+        description: e.g. Debug or Release
+        default: Release
+      #Required when deploy is true.
+      package-name:
+        type: string
+        description: Play Console application ID e.g. com.example.app
+        default: ''
+      play-track:
+        type: string
+        description: internal, alpha, beta or production
+        default: internal
+      app-display-version:
+        type: string
+        description: Android versionName e.g. 1.2.3
+        default: '1.0'
+      app-version-code:
+        type: string
+        description: Android versionCode e.g. github.run_number
+        default: '1'
+    #Required only when deploy is true.
+    secrets:
+      ANDROID_KEYSTORE_BASE64:
+        required: false
+      ANDROID_KEYSTORE_PASSWORD:
+        required: false
+      ANDROID_KEY_ALIAS:
+        required: false
+      ANDROID_KEY_PASSWORD:
+        required: false
+      GOOGLE_PLAY_SERVICE_ACCOUNT_JSON:
+        required: false
+
+permissions: {}
+
+jobs:
+  build-and-deploy:
+    runs-on: ${{ inputs.runs-on }}
+    if: github.actor != 'dependabot[bot]'
+    permissions:
+      contents: read
+    #Inputs are free text, so scripts only ever read them as quoted environment variables.
+    env:
+      PROJECT: ${{ inputs.project }}
+      TARGET_FRAMEWORK: ${{ inputs.target-framework }}
+      CONFIGURATION: ${{ inputs.configuration }}
+      DEPLOY: ${{ inputs.deploy }}
+      PACKAGE_NAME: ${{ inputs.package-name }}
+      PLAY_TRACK: ${{ inputs.play-track }}
+      APP_DISPLAY_VERSION: ${{ inputs.app-display-version }}
+      APP_VERSION_CODE: ${{ inputs.app-version-code }}
+      PUBLISH_DIR: ${{ github.workspace }}/artifacts/maui-android
+    steps:
+      - name: validate inputs
+        run: |
+          set -euo pipefail
+          fail() { echo "::error::$1"; exit 1; }
+          [[ "$APP_DISPLAY_VERSION" =~ ^[0-9]+(\.[0-9]+){0,3}$ ]] || fail "app-display-version '$APP_DISPLAY_VERSION' must be numeric, e.g. 1.2.3."
+          [[ "$APP_VERSION_CODE" =~ ^[1-9][0-9]*$ ]] || fail "app-version-code '$APP_VERSION_CODE' must be a positive integer."
+          [[ "$TARGET_FRAMEWORK" =~ ^net[0-9.]+-android[0-9.]*$ ]] || fail "target-framework '$TARGET_FRAMEWORK' is not an Android framework."
+          case "$PLAY_TRACK" in
+            internal | alpha | beta | production) ;;
+            *) fail "play-track must be internal, alpha, beta or production." ;;
+          esac
+          if [[ "$DEPLOY" == "true" && -z "$PACKAGE_NAME" ]]; then
+            fail "package-name is required when deploy is true."
+          fi
+
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: ${{ inputs.dotnet-version }}
+
+      - name: dotnet workload restore
+        run: dotnet workload restore "$PROJECT"
+
+      - name: decode keystore
+        if: inputs.deploy
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/android.keystore"
+
+      #MSBuild reads environment variables as properties, so signing secrets never appear on the command
+      #line. AndroidKeyStore=true is what makes the Android build use the custom keystore.
+      - name: dotnet publish
+        env:
+          AndroidKeyStore: ${{ inputs.deploy }}
+          AndroidSigningKeyStore: ${{ inputs.deploy && format('{0}/android.keystore', runner.temp) || '' }}
+          AndroidSigningKeyAlias: ${{ inputs.deploy && secrets.ANDROID_KEY_ALIAS || '' }}
+          AndroidSigningKeyPass: ${{ inputs.deploy && secrets.ANDROID_KEY_PASSWORD || '' }}
+          AndroidSigningStorePass: ${{ inputs.deploy && secrets.ANDROID_KEYSTORE_PASSWORD || '' }}
+        run: |
+          dotnet publish "$PROJECT" -f "$TARGET_FRAMEWORK" -c "$CONFIGURATION" -o "$PUBLISH_DIR" \
+            -p:ApplicationDisplayVersion="$APP_DISPLAY_VERSION" -p:ApplicationVersion="$APP_VERSION_CODE" \
+            -p:Version="$APP_DISPLAY_VERSION" -p:SourceRevisionId="$GITHUB_SHA" \
+            -p:GitRepository="$GITHUB_REPOSITORY" -p:GitBranch="$GITHUB_REF" \
+            -p:BuildWorkflow="$GITHUB_WORKFLOW" -p:BuildRunId="$GITHUB_RUN_ID" \
+            -p:BuildRunNumber="$GITHUB_RUN_NUMBER"
+          find "$PUBLISH_DIR" -maxdepth 1 -name '*.aab' -printf '%f\n'
+
+      - name: upload to Google Play
+        if: inputs.deploy
+        uses: r0adkll/upload-google-play@v1
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON }}
+          packageName: ${{ inputs.package-name }}
+          releaseFiles: ${{ github.workspace }}/artifacts/maui-android/*-Signed.aab
+          track: ${{ inputs.play-track }}
+
+      - name: remove keystore
+        if: always() && inputs.deploy
+        run: rm -f "$RUNNER_TEMP/android.keystore"
