@@ -308,7 +308,7 @@ graph LR
     J --> A2["actions/setup-dotnet@v6"]
     J --> A3["actions/setup-java@v6"]
     J --> A4["r0adkll/upload-google-play@v1"]
-```n
+```
 ### _build-maui-windows
 
 ```mermaid
@@ -411,7 +411,7 @@ graph LR
     J --> A2["azure/setup-helm@v5"]
     J --> A3["f2calv/gha-workflows/.github/actions/devcontainer-tool-versions@v1"]
     class A3 f2calv
-```n
+```
 ### _readme-ref-check
 
 ```mermaid
@@ -419,7 +419,7 @@ graph LR
     classDef f2calv fill:#dbeafe,stroke:#2563eb,color:#1e3a5f
     W(["_readme-ref-check"]) --> J["readme-ref-check"]
     J --> A1["actions/checkout@v7"]
-```n
+```
 ### _dotnet-nuget-library
 
 ```mermaid
@@ -431,7 +431,7 @@ graph LR
     J --> A1["f2calv/gha-dotnet-nuget@v2"]
     W --> R(["_gha-release-versioning (release)"])
     class A1 f2calv
-```n
+```
 ### _lint
 
 ```mermaid
