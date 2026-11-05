@@ -1,0 +1,6 @@
+#TODO: Remove once actionlint lists the ubuntu-26.04 GitHub-hosted labels; v1.7.12 and its main branch
+#stop at ubuntu-24.04, so it would otherwise reject the shared-workflow defaults' runner in ci.yml.
+self-hosted-runner:
+  labels:
+    - ubuntu-26.04
+    - ubuntu-26.04-arm

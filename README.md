@@ -60,7 +60,7 @@ project must be tested independently.
 `test-compose-services` is a JSON array such as `["database"]` of services to start before testing and stop afterward. Set
 `test-compose-file` only when the repository does not use the default Compose filename.
 
-Common build defaults: `runs-on: ubuntu-24.04`, .NET `configuration: Release`,
+Common build defaults: `runs-on: ubuntu-26.04`, .NET `configuration: Release`,
 `execute-tests: true`, `collect-coverage: false`, `coverage-artifact-name: dotnet-coverage`.
 Coverage is MTP XML, not the NuGet Action's cobertura/lcov pipeline. Unlike that Action, this
 workflow honors `execute-tests: false` even on pull requests; callers own their required gates.
