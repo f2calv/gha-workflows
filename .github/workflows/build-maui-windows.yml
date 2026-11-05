@@ -1,0 +1,130 @@
+name: _build-maui-windows
+
+on:
+  workflow_call:
+    inputs:
+      #MAUI Windows targets build only on Windows.
+      runs-on:
+        type: string
+        description: Windows runner label e.g. windows-2025
+        default: windows-2025
+      project:
+        type: string
+        description: MAUI app project e.g. src/MyApp/MyApp.csproj
+        required: true
+      target-framework:
+        type: string
+        description: Windows target framework e.g. net10.0-windows10.0.19041.0
+        default: net10.0-windows10.0.19041.0
+      runtime-identifier:
+        type: string
+        description: Windows runtime identifier e.g. win-x64
+        default: win-x64
+      #true bundles .NET and the Windows App SDK so testers need no runtime installs.
+      self-contained:
+        type: boolean
+        description: Bundle the .NET runtime and Windows App SDK.
+        default: true
+      dotnet-version:
+        type: string
+        description: .NET SDK version e.g. 10.0.x
+        default: 10.0.x
+      configuration:
+        type: string
+        description: e.g. Debug or Release
+        default: Release
+      app-display-version:
+        type: string
+        description: Application display version e.g. 1.2.3
+        default: '1.0'
+      app-version-code:
+        type: string
+        description: Application build number e.g. github.run_number
+        default: '1'
+      #Empty derives <project>-windows-<runtime-identifier>-<app-display-version>.
+      artifact-name:
+        type: string
+        description: Artifact name e.g. MyApp-windows-x64
+        default: ''
+      retention-days:
+        type: number
+        description: Artifact retention in days e.g. 14
+        default: 14
+    outputs:
+      artifact-name:
+        description: Name of the uploaded artifact.
+        value: ${{ jobs.build.outputs.artifact-name }}
+
+permissions: {}
+
+jobs:
+  build:
+    runs-on: ${{ inputs.runs-on }}
+    permissions:
+      contents: read
+    outputs:
+      artifact-name: ${{ steps.validate.outputs.artifact-name }}
+    defaults:
+      run:
+        shell: pwsh
+    #Inputs are free text, so scripts only ever read them as environment variables.
+    env:
+      PROJECT: ${{ inputs.project }}
+      TARGET_FRAMEWORK: ${{ inputs.target-framework }}
+      RUNTIME_IDENTIFIER: ${{ inputs.runtime-identifier }}
+      SELF_CONTAINED: ${{ inputs.self-contained }}
+      CONFIGURATION: ${{ inputs.configuration }}
+      APP_DISPLAY_VERSION: ${{ inputs.app-display-version }}
+      APP_VERSION_CODE: ${{ inputs.app-version-code }}
+      IN_ARTIFACT_NAME: ${{ inputs.artifact-name }}
+      RETENTION_DAYS: ${{ inputs.retention-days }}
+      PUBLISH_DIR: ${{ github.workspace }}/artifacts/maui-windows
+    steps:
+      - name: validate inputs
+        id: validate
+        run: |
+          function Fail([string]$message) { "::error::$message"; exit 1 }
+          if ($env:APP_DISPLAY_VERSION -notmatch '^[0-9]+(\.[0-9]+){0,3}$') { Fail "app-display-version '$env:APP_DISPLAY_VERSION' must be numeric, e.g. 1.2.3." }
+          if ($env:APP_VERSION_CODE -notmatch '^[1-9][0-9]*$') { Fail "app-version-code '$env:APP_VERSION_CODE' must be a positive integer." }
+          if ($env:TARGET_FRAMEWORK -notmatch '^net[0-9.]+-windows[0-9.]*$') { Fail "target-framework '$env:TARGET_FRAMEWORK' is not a Windows framework." }
+          if ($env:RUNTIME_IDENTIFIER -notmatch '^win-(x64|x86|arm64)$') { Fail "runtime-identifier '$env:RUNTIME_IDENTIFIER' must be win-x64, win-x86 or win-arm64." }
+          if ([int]$env:RETENTION_DAYS -lt 1 -or [int]$env:RETENTION_DAYS -gt 90) { Fail 'retention-days must be between 1 and 90.' }
+          $name = $env:IN_ARTIFACT_NAME
+          if (-not $name) {
+            $project = [IO.Path]::GetFileNameWithoutExtension($env:PROJECT)
+            $name = "$project-windows-$($env:RUNTIME_IDENTIFIER -replace '^win-', '')-$env:APP_DISPLAY_VERSION"
+          }
+          if ($name -notmatch '^[A-Za-z0-9._-]+$') { Fail "artifact-name '$name' may contain only letters, digits, '.', '_' and '-'." }
+          "artifact-name=$name" >> $env:GITHUB_OUTPUT
+
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: ${{ inputs.dotnet-version }}
+
+      - name: dotnet workload restore
+        run: dotnet workload restore $env:PROJECT
+
+      #WindowsPackageType=None publishes a runnable folder rather than an MSIX that needs signing.
+      #RuntimeIdentifierOverride, unlike -r, does not make restore apply the runtime to other target frameworks.
+      - name: dotnet publish
+        run: |
+          dotnet publish $env:PROJECT -f $env:TARGET_FRAMEWORK -c $env:CONFIGURATION -o $env:PUBLISH_DIR `
+            -p:RuntimeIdentifierOverride=$env:RUNTIME_IDENTIFIER `
+            -p:WindowsPackageType=None -p:SelfContained=$env:SELF_CONTAINED -p:WindowsAppSDKSelfContained=$env:SELF_CONTAINED `
+            -p:ApplicationDisplayVersion=$env:APP_DISPLAY_VERSION -p:ApplicationVersion=$env:APP_VERSION_CODE `
+            -p:Version=$env:APP_DISPLAY_VERSION -p:SourceRevisionId=$env:GITHUB_SHA `
+            -p:GitRepository=$env:GITHUB_REPOSITORY -p:GitBranch=$env:GITHUB_REF `
+            -p:BuildWorkflow=$env:GITHUB_WORKFLOW -p:BuildRunId=$env:GITHUB_RUN_ID `
+            -p:BuildRunNumber=$env:GITHUB_RUN_NUMBER
+          Get-ChildItem $env:PUBLISH_DIR -Filter *.exe | ForEach-Object Name
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: ${{ steps.validate.outputs.artifact-name }}
+          path: ${{ env.PUBLISH_DIR }}
+          if-no-files-found: error
+          retention-days: ${{ inputs.retention-days }}

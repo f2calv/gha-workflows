@@ -1,0 +1,11 @@
+namespace Fixture.Maui.WinUI;
+
+/// <summary>WinUI entry point that starts the MAUI app.</summary>
+public sealed partial class App : MauiWinUIApplication
+{
+    /// <summary>Initializes a new instance of the <see cref="App"/> class.</summary>
+    public App() => InitializeComponent();
+
+    /// <inheritdoc/>
+    protected override MauiApp CreateMauiApp() => MauiProgram.CreateMauiApp();
+}

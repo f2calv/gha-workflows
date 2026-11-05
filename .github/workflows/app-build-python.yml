@@ -5,8 +5,8 @@ on:
     inputs:
       runs-on:
         type: string
-        description: Runner label, e.g. ubuntu-24.04-arm for a native arm64 build.
-        default: ubuntu-24.04
+        description: Runner label, e.g. ubuntu-26.04-arm for a native arm64 build.
+        default: ubuntu-26.04
       #Exported to every step as VERSION, e.g. for a dynamic version in the build backend.
       version:
         type: string

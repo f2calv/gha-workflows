@@ -23,6 +23,7 @@ updates:
     directories:
       - /
       - /tests/fixtures/dotnet
+      - /tests/fixtures/maui/Fixture.Maui
     schedule:
       interval: weekly
       time: "04:00"

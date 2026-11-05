@@ -5,8 +5,8 @@ on:
     inputs:
       runs-on:
         type: string
-        description: Runner label, e.g. ubuntu-24.04-arm for a native arm64 build.
-        default: ubuntu-24.04
+        description: Runner label, e.g. ubuntu-26.04-arm for a native arm64 build.
+        default: ubuntu-26.04
       project:
         type: string
         description: MAUI app project e.g. src/MyApp/MyApp.csproj
@@ -24,6 +24,11 @@ on:
         type: string
         description: .NET SDK version e.g. 10.0.x
         default: 10.0.x
+      #Pinned because newer runner images default to a JDK that .NET for Android does not support.
+      java-version:
+        type: string
+        description: Microsoft OpenJDK major version e.g. 17
+        default: '17'
       configuration:
         type: string
         description: e.g. Debug or Release
@@ -100,6 +105,11 @@ jobs:
       - uses: actions/setup-dotnet@v6
         with:
           dotnet-version: ${{ inputs.dotnet-version }}
+
+      - uses: actions/setup-java@v6
+        with:
+          distribution: microsoft
+          java-version: ${{ inputs.java-version }}
 
       - name: dotnet workload restore
         run: dotnet workload restore "$PROJECT"
