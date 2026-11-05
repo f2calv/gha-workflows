@@ -188,6 +188,23 @@ jobs:
     permissions:
       contents: read
 
+  #Unsigned bundle only; deploy stays false so no signing secret or Play upload is involved.
+  test-maui-android:
+    uses: ./.github/workflows/deploy-maui-android.yml
+    with:
+      project: tests/fixtures/maui/Fixture.Maui/Fixture.Maui.csproj
+    permissions:
+      contents: read
+
+  test-maui-windows:
+    uses: ./.github/workflows/build-maui-windows.yml
+    with:
+      project: tests/fixtures/maui/Fixture.Maui/Fixture.Maui.csproj
+      artifact-name: fixture-maui-windows
+      retention-days: 1
+    permissions:
+      contents: read
+
   #The composite action is referenced locally here; reusable workflows can only reach it by a published ref.
   test-clone-extra-repos:
     runs-on: ubuntu-24.04
@@ -217,7 +234,7 @@ jobs:
 
   release:
     if: github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
-    needs: [lint, versioning, validate, test-dotnet, test-container, test-helm, test-go, test-rust, test-python, test-terraform, test-terraform-test, test-helm-lint, test-devcontainer-tool-versions, test-dotnet-nuget-library, test-ef-drift, test-clone-extra-repos]
+    needs: [lint, versioning, validate, test-dotnet, test-container, test-helm, test-go, test-rust, test-python, test-terraform, test-terraform-test, test-helm-lint, test-devcontainer-tool-versions, test-dotnet-nuget-library, test-ef-drift, test-maui-android, test-maui-windows, test-clone-extra-repos]
     uses: ./.github/workflows/gha-release-versioning.yml
     with:
       semVer: ${{ format('{0}.{1}.{2}', needs.versioning.outputs.major, needs.versioning.outputs.minor, needs.versioning.outputs.patch) }}

@@ -82,7 +82,13 @@ must actually have read access; the default token does not automatically grant a
 
 | Workflow | Description | Key Inputs |
 | --- | --- | --- |
-| [Deploy MAUI Android](.github/workflows/deploy-maui-android.yml) | Publish a .NET MAUI Android app bundle, or sign it and upload it to Google Play. | `project` (required), `runs-on`, `target-framework` (`net10.0-android`), `deploy` (`false`), `dotnet-version` (`10.0.x`), `configuration` (`Release`), `package-name` (required to deploy), `play-track` (`internal`), `app-display-version` (`1.0`), `app-version-code` (`1`) |
+| [Deploy MAUI Android](.github/workflows/deploy-maui-android.yml) | Publish a .NET MAUI Android app bundle, or sign it and upload it to Google Play. | `project` (required), `runs-on`, `target-framework` (`net10.0-android`), `deploy` (`false`), `dotnet-version` (`10.0.x`), `java-version` (`17`), `configuration` (`Release`), `package-name` (required to deploy), `play-track` (`internal`), `app-display-version` (`1.0`), `app-version-code` (`1`) |
+| [Build MAUI Windows](.github/workflows/build-maui-windows.yml) | Publish an unpackaged .NET MAUI Windows app on a Windows runner and upload it as a downloadable artifact; self-contained by default, so testers need no .NET or Windows App SDK install. | `project` (required), `runs-on` (`windows-2025`), `target-framework` (`net10.0-windows10.0.19041.0`), `runtime-identifier` (`win-x64`), `self-contained` (`true`), `dotnet-version` (`10.0.x`), `configuration` (`Release`), `app-display-version` (`1.0`), `app-version-code` (`1`), `artifact-name` (derived), `retention-days` (`14`) |
+
+The Android workflow pins Microsoft OpenJDK because newer runner images default to a JDK that .NET for
+Android does not support. The Windows workflow publishes with `RuntimeIdentifierOverride` rather than
+`-r`, so a project that also targets Android restores only the Windows runtime. An empty
+`artifact-name` becomes `<project>-windows-<architecture>-<app-display-version>`.
 
 ### Database
 
@@ -194,26 +200,28 @@ that select an environment, subject to its protection rules.
 | Release calculation / publication | `contents: read` / `contents: write` | Automatic token; full authenticated history is checked out internally |
 | Terraform | `contents: read`, `id-token: write` (validated at startup for every command, including `validate` and `test`) | For Azure operations: `ARM_TENANT_ID`, `ARM_SUBSCRIPTION_ID`, `ARM_CLIENT_ID`; additionally `ARM_CLIENT_SECRET` when `use-oidc: false` |
 | .NET NuGet library | `contents: write`, `id-token: write`, `packages: write` | Automatic token; nuget.org Trusted Publishing when `nuget-user` is set |
+| MAUI Windows | `contents: read` | None; artifacts upload with the automatic token |
 | MAUI Android | `contents: read` | With `deploy: true`, map the declared `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD` and `GOOGLE_PLAY_SERVICE_ACCOUNT_JSON` secrets |
 
 MAUI signing secrets reach MSBuild as environment variables, never as command-line properties.
-Unsigned MAUI validation needs no signing credentials. Container, Helm, GitOps and MAUI workflows
-skip Dependabot actors. Publication and Terraform state mutations are not universally event-gated:
+Unsigned MAUI validation needs no signing credentials. Container, Helm, GitOps and MAUI Android workflows
+skip Dependabot actors; MAUI Windows builds for every actor. Publication and Terraform state mutations are not universally event-gated:
 callers must restrict those jobs to trusted events and appropriate environments.
 
 ## Outputs
 
-Only the release workflow declares reusable-workflow outputs:
+The release and MAUI Windows workflows declare reusable-workflow outputs:
 
-| Output | Meaning |
-| --- | --- |
-| `version` | GitVersion FullSemVer or supplied `semVer` |
-| `major`, `minor`, `patch` | Individual version components |
-| `release-exists` | String `true` / `false` indicating a GitHub Release, not merely a tag |
+| Output | Workflow | Meaning |
+| --- | --- | --- |
+| `version` | Release | GitVersion FullSemVer or supplied `semVer` |
+| `major`, `minor`, `patch` | Release | Individual version components |
+| `release-exists` | Release | String `true` / `false` indicating a GitHub Release, not merely a tag |
+| `artifact-name` | MAUI Windows | Name of the uploaded Windows build artifact |
 
 Consume them through `needs.<job-id>.outputs.<name>` as in the usage example.
 Other workflows return job success/failure and side effects, not named job outputs:
-.NET optionally uploads MTP XML coverage, Terraform `plan` uploads binary/text plan artifacts,
+.NET optionally uploads MTP XML coverage, MAUI Android publishes an unsigned or Play-uploaded bundle, Terraform `plan` uploads binary/text plan artifacts,
 container/Helm jobs can publish registry artifacts, and GitOps jobs can push commits.
 Do not expect the NuGet companion Action's output or package publishing from `app-build-dotnet`.
 
@@ -298,7 +306,18 @@ graph LR
     W(["_deploy-maui-android"]) --> J["build-and-deploy"]
     J --> A1["actions/checkout@v7"]
     J --> A2["actions/setup-dotnet@v6"]
-    J --> A3["r0adkll/upload-google-play@v1"]
+    J --> A3["actions/setup-java@v6"]
+    J --> A4["r0adkll/upload-google-play@v1"]
+```n
+### _build-maui-windows
+
+```mermaid
+graph LR
+    classDef f2calv fill:#dbeafe,stroke:#2563eb,color:#1e3a5f
+    W(["_build-maui-windows"]) --> J["build"]
+    J --> A1["actions/checkout@v7"]
+    J --> A2["actions/setup-dotnet@v6"]
+    J --> A3["actions/upload-artifact@v7"]
 ```
 
 ### _ef-migrations-drift
@@ -442,6 +461,8 @@ fixtures in [tests/fixtures](tests/fixtures), before a release moves the floatin
 | `readme-ref-check.yml` | This README | The floating major reference for this repository's workflows |
 | `devcontainer-tool-versions` action | This repository's devcontainer | Helm and yq versions read without modifying the file |
 | `ef-migrations-drift.yml` | Model-less EF Core context with a design-time factory | Tool restore and the pending-model-changes check |
+| `deploy-maui-android.yml` | Code-only MAUI app targeting Android, plus Windows on Windows hosts | Workload restore, pinned JDK and an unsigned bundle publish; never deployed |
+| `build-maui-windows.yml` | The same MAUI fixture | Self-contained unpackaged publish and a one-day artifact upload |
 | `clone-extra-repos` action | Two public repositories | Ref and default-branch clones without persisted credentials |
 
 The root `global.json`, `.config/dotnet-tools.json` and the Helm version in
