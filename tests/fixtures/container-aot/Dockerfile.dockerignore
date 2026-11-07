@@ -1,0 +1,10 @@
+*
+!tests/
+!tests/fixtures/
+!tests/fixtures/dotnet/
+!tests/fixtures/dotnet/Directory.Build.props
+!tests/fixtures/dotnet/Directory.Packages.props
+!tests/fixtures/dotnet/src/
+!tests/fixtures/dotnet/src/Fixture.Aot/
+!tests/fixtures/dotnet/src/Fixture.Aot/Fixture.Aot.csproj
+!tests/fixtures/dotnet/src/Fixture.Aot/Program.cs

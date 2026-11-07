@@ -51,6 +51,54 @@ jobs:
     permissions:
       contents: read
 
+  test-container-inputs:
+    runs-on: ubuntu-26.04
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 1
+
+      - name: test platform runner input validation
+        run: |
+          set -euo pipefail
+          SCRIPT=$(docker run --rm --volume "$PWD:/work:ro" --workdir /work mikefarah/yq:4 -r \
+            '.jobs.prepare.steps[0].run' .github/workflows/container-image-build.yml)
+          export PLATFORM=linux/amd64,linux/arm64 DEFAULT_RUNNER=ubuntu-26.04 ARTIFACT_NAME=fixture
+          export GITHUB_OUTPUT
+          GITHUB_OUTPUT=$(mktemp)
+          trap 'rm -f "$GITHUB_OUTPUT"' EXIT
+          export PLATFORM_RUNNERS=''
+          bash -c "$SCRIPT"
+          sed 's/^matrix=//' "$GITHUB_OUTPUT" | jq -e '.include | length == 1' > /dev/null
+          CASES=1
+          for mapping in \
+            '[{"platform":"linux/amd64","runner":"ubuntu-26.04"},{"platform":"linux/arm64","runner":"ubuntu-26.04-arm"}]' \
+            '[{"platform":"linux/amd64","runner":"ubuntu-26.04"},{"platform":"linux/arm64","runner":["self-hosted","linux","ARM64"]}]'; do
+            export PLATFORM_RUNNERS="$mapping"
+            : > "$GITHUB_OUTPUT"
+            bash -c "$SCRIPT"
+            sed 's/^matrix=//' "$GITHUB_OUTPUT" | jq -e '.include | length == 2' > /dev/null
+            CASES=$((CASES + 1))
+          done
+          for mapping in \
+            '[]' \
+            'not-json' \
+            '[{"platform":"linux/arm64","runner":"ubuntu-26.04-arm"}]' \
+            '[{"platform":"linux/amd64","runner":"ubuntu-26.04"},{"platform":"linux/amd64","runner":"ubuntu-26.04"}]' \
+            '[{"platform":"linux/amd64","runner":42},{"platform":"linux/arm64","runner":"ubuntu-26.04-arm"}]' \
+            '[{"platform":"linux/amd64","runner":"ubuntu-26.04"},{"platform":"linux/arm64","runner":[]}]'; do
+            export PLATFORM_RUNNERS="$mapping"
+            if bash -c "$SCRIPT" > /dev/null 2>&1; then
+              echo '::error::Invalid runner mapping was accepted'
+              exit 1
+            fi
+            CASES=$((CASES + 1))
+          done
+          test "$CASES" -eq 9
+          echo "Passed $CASES platform runner validation cases"
+
   test-container:
     needs: versioning
     uses: ./.github/workflows/container-image-build.yml
@@ -61,11 +109,57 @@ jobs:
       args: --label fixture=self-test --label org.opencontainers.image.title=fixture
       dockerfile: tests/fixtures/container/Dockerfile
       tag: ${{ needs.versioning.outputs.version }}
+      platform: linux/amd64
       push-image: false
       buildkit-cache: true
       smoke-test: |
         EXPECTED='${{ needs.versioning.outputs.version }}'
         test "$(docker run --rm "$IMAGE")" = "${EXPECTED,,}"
+    permissions:
+      contents: read
+      packages: write
+
+  test-container-multiarch:
+    needs: versioning
+    uses: ./.github/workflows/container-image-build.yml
+    with:
+      registry: ghcr.io/${{ github.repository_owner }}
+      repository: GHA-Workflows-Fixture-Multiarch
+      dockerfile: tests/fixtures/container/Dockerfile
+      tag: ${{ needs.versioning.outputs.version }}
+      platform: linux/amd64,linux/arm64,linux/arm/v7
+      push-image: false
+      buildkit-cache: true
+      smoke-test: |
+        EXPECTED='${{ needs.versioning.outputs.version }}'
+        test "$(docker run --rm --read-only --network none "$IMAGE")" = "${EXPECTED,,}"
+    permissions:
+      contents: read
+      packages: write
+
+  test-container-aot:
+    needs: versioning
+    uses: ./.github/workflows/container-image-build.yml
+    with:
+      registry: ghcr.io/${{ github.repository_owner }}
+      repository: GHA-Workflows-Fixture-Aot
+      dockerfile: tests/fixtures/container-aot/Dockerfile
+      tag: ${{ needs.versioning.outputs.version }}
+      platform: linux/amd64,linux/arm64
+      platform-runners: >-
+        [{"platform":"linux/amd64","runner":"ubuntu-26.04"},
+        {"platform":"linux/arm64","runner":"ubuntu-26.04-arm"}]
+      artifact-name: container-aot
+      push-image: false
+      buildkit-cache: true
+      smoke-test: |
+        EXPECTED='${{ needs.versioning.outputs.version }}'
+        case "$(docker image inspect "$IMAGE" --format '{{.Architecture}}')" in
+          amd64) PROCESS_ARCH=X64 ;;
+          arm64) PROCESS_ARCH=Arm64 ;;
+          *) exit 1 ;;
+        esac
+        test "$(docker run --rm --read-only --network none "$IMAGE")" = "${EXPECTED,,}|$PROCESS_ARCH|False"
     permissions:
       contents: read
       packages: write
@@ -234,7 +328,7 @@ jobs:
 
   release:
     if: github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
-    needs: [lint, versioning, validate, test-dotnet, test-container, test-helm, test-go, test-rust, test-python, test-terraform, test-terraform-test, test-helm-lint, test-devcontainer-tool-versions, test-dotnet-nuget-library, test-ef-drift, test-maui-android, test-maui-windows, test-clone-extra-repos]
+    needs: [lint, versioning, validate, test-dotnet, test-container-inputs, test-container, test-container-multiarch, test-container-aot, test-helm, test-go, test-rust, test-python, test-terraform, test-terraform-test, test-helm-lint, test-devcontainer-tool-versions, test-dotnet-nuget-library, test-ef-drift, test-maui-android, test-maui-windows, test-clone-extra-repos]
     uses: ./.github/workflows/gha-release-versioning.yml
     with:
       semVer: ${{ format('{0}.{1}.{2}', needs.versioning.outputs.major, needs.versioning.outputs.minor, needs.versioning.outputs.patch) }}

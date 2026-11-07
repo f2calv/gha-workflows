@@ -114,7 +114,7 @@ controls, not ordinary validation inputs; `destroy` auto-approves.
 
 | Workflow | Description | Key Inputs |
 | --- | --- | --- |
-| [Container Image Build](.github/workflows/container-image-build.yml) | Multi-architecture buildx build and optional push; optional single-platform smoke test before the final build. Uses the caller's GitHub token for registry login, not independent ACR/Docker Hub credentials. No existing-tag conflict check enforces immutability. | `registry` (required), `tag` (required), `runs-on`, `repository`, `repository-prefix`, `dockerfile`, `buildkit-cache`, `default-branch-tag`, `feature-branch-tag`, `platform`, `args`, `default-branch`, `push-image`, `attestations`, `github-private-packages-auth`, `extra-repos`, `smoke-test`, `smoke-test-platform` |
+| [Container Image Build](.github/workflows/container-image-build.yml) | Single-builder or parallel native-platform builds from one Dockerfile, with optional smoke tests and verified native image-index publication. Uses the caller's GitHub token for registry login, not independent ACR/Docker Hub credentials. No existing-tag conflict check enforces immutability. | `registry` (required), `tag` (required), `runs-on`, `repository`, `repository-prefix`, `dockerfile`, `buildkit-cache`, `default-branch-tag`, `feature-branch-tag`, `platform`, `platform-runners`, `artifact-name`, `args`, `default-branch`, `push-image`, `attestations`, `github-private-packages-auth`, `extra-repos`, `smoke-test`, `smoke-test-platform` |
 | [Helm Chart Package](.github/workflows/helm-chart-package.yml) | Lint, package and push a Helm chart to an OCI registry. The Helm version comes from `.devcontainer/devcontainer.json`; chart testing can use lint, KIND-backed install or skip mode. | `tag` (required), `image-registry` (required), `image-repository` (required), `chart-registry` (required), `chart-repository` (required), `runs-on`, `tag-override`, `chart-path`, `is-library-chart`, `set-chart-app-version`, `has-image`, `push-chart`, `chart-registry-username`, `chart-dependency-name`, `chart-testing-cli-command`, `chart-testing-cli-version` |
 | [GitOps Helm Update](.github/workflows/gitops-helm-update.yml) | Update image and chart coordinates in ArgoCD Helm manifests, then optionally commit them to a GitOps repository. Requires `GH_PAT_GITOPS`. | `manifest-paths` (required), `tag` (required), `namespace` (required), `image-registry` (required), `image-repository` (required), `gitops-repo` (required), `runs-on`, `tag-override`, chart coordinates, Git controls, `devcontainer-path`, `environment` |
 | [Package Cleanup](.github/workflows/package-cleanup.yml) | Prune old container and Helm chart versions from ghcr.io via [dataaxiom/ghcr-cleanup-action](https://github.com/dataaxiom/ghcr-cleanup-action). Keeps the N most-recent tagged versions, deletes untagged orphans, and protects excluded tags. Defaults to dry-run. | `packages` (required), `runs-on`, `keep-n-tagged`, `exclude-tags`, `older-than`, `delete-untagged`, `dry-run` |
@@ -122,11 +122,23 @@ controls, not ordinary validation inputs; `destroy` auto-approves.
 Container defaults: context `.`, `dockerfile: Dockerfile`, `platform: linux/amd64,linux/arm64,linux/arm/v7`,
 `push-image: true`, `attestations: false`, `buildkit-cache: false`, `default-branch: refs/heads/main`, alias tags
 `latest` / `latest-dev`, and `smoke-test-platform: linux/amd64`. The default repository is
-the lowercased caller repository name **without the owner**; supply a full
-`repository: ${{ github.repository }}` for GHCR. Registry login still runs with `push-image: false`.
+the lowercased caller repository name **without the owner**. For GHCR, use
+`registry: ghcr.io/${{ github.repository_owner }}` with that default, or use `registry: ghcr.io`
+with `repository: ${{ github.repository }}`. Do not include the owner twice.
+Registry login is skipped with `push-image: false`.
 Registry, repository and tags are lowercased and validated; an invalid value fails the job.
 The smoke-test command receives `$IMAGE`. `args` is split on whitespace only: quotes are not
 interpreted and nothing is expanded, so a single argument cannot contain a space.
+
+Leave `platform-runners` empty for single-builder cross-compilation or emulation. For parallel
+native builds, supply an exact platform-to-runner mapping and a unique artifact prefix.
+See [Container Image Architecture](docs/architecture-container-images.md) for the caller example,
+platform hand-offs, OCI index assembly and no-publication local-registry requirements.
+Dependabot builds still validate, but never publish images.
+
+The `container-image-result` job rejects failed, cancelled or unexpectedly skipped jobs.
+Rulesets that require individual reusable-workflow job checks should select
+`<caller job> / container-image-result` instead of a matrix-specific build check.
 
 Helm always logs in, even with `push-chart: false`. It reads the Helm version from
 `.devcontainer/devcontainer.json` and needs Docker, `jq`, Node/npm and `yq` on the runner.
@@ -148,6 +160,9 @@ validates that each Argo CD chart renders and commits only the updated manifests
 carefully. The chart registry password is always the caller's `GITHUB_TOKEN`.
 `manifest-paths` is a space-separated list of YAML paths, not a JSON array.
 
+See [Helm And GitOps Architecture](docs/architecture-helm-gitops.md) for packaging and install-test
+branches, coordinate conventions, caller-owned dependencies and credential boundaries.
+
 Cleanup's `packages` is a comma-separated list without the owner, such as
 `example-app,charts/example-app`. Defaults retain 10 tagged versions, protect `latest`,
 delete untagged versions, omit an age filter and use `dry-run: true`. Excluded tag patterns
@@ -159,7 +174,11 @@ take precedence; opt out of dry-run only when the caller intends real deletion.
 | --- | --- | --- |
 | [.NET NuGet Library](.github/workflows/dotnet-nuget-library.yml) | Complete library CI: lint, versioning, build/test/pack/push through [gha-dotnet-nuget](https://github.com/f2calv/gha-dotnet-nuget), then a `major.minor.patch` release when none exists. Test services are not supported yet. | `runs-on`, `solution-name`, `configuration`, `execute-tests`, `code-coverage`, `dotnet-test-args`, `dotnet-restore-args`, `push-preview`, `package-filter`, `nuget-user`, `release` (`true`) |
 
-Call it as the only job and grant the union of its permissions: `contents: write`, `id-token: write` and `packages: write`.
+A caller of the complete workflow must grant `contents: write`, `id-token: write` and
+`packages: write`. For nuget.org Trusted Publishing, use the package Action in a local build job
+instead: a cross-repository reusable workflow does not satisfy the workflow identity check.
+See [NuGet Library Architecture](docs/architecture-nuget-library.md) for the job graph, release
+gate and local-job example.
 
 ### Release & Versioning
 
@@ -348,15 +367,9 @@ graph LR
 
 ### _container-image-build
 
-```mermaid
-graph LR
-    classDef f2calv fill:#dbeafe,stroke:#2563eb,color:#1e3a5f
-    W(["_container-image-build"]) --> J["container-image-build"]
-    J --> A1["actions/checkout@v7"]
-    J --> A2["f2calv/gha-workflows/.github/actions/clone-extra-repos@v1"]
-    class A2 f2calv
-    J --> A3["crazy-max/ghaction-github-runtime@v4 (optional cache)"]
-```
+See [Container Image Architecture](docs/architecture-container-images.md) for the execution
+flow, action dependencies, native runner mapping and how platform images become one OCI image
+index. The page also distinguishes registry publication from the no-publication fixture path.
 
 ### _helm-chart-package
 
@@ -454,7 +467,10 @@ fixtures in [tests/fixtures](tests/fixtures), before a release moves the floatin
 | Workflow | Fixture | Exercises |
 | --- | --- | --- |
 | `app-build-dotnet.yml` | .NET library and xUnit v3 tests | Restore, build, Microsoft.Testing.Platform tests and coverage upload |
-| `container-image-build.yml` | Minimal multi-architecture image | Default platforms, BuildKit cache and the smoke test; never pushed |
+| `container-image-build.yml` | Minimal single-platform image | Vanilla amd64 build, argument forwarding, BuildKit cache and smoke test; never published |
+| `container-image-build.yml` | Minimal multi-architecture image | Legacy amd64/arm64/arm/v7 build on one runner with emulation and smoke test; never published |
+| `container-image-build.yml` | Native AOT executable | Parallel native amd64/arm64 builds, architecture and dynamic-code checks, archive transfer and verified image index in a disposable registry; never published to GHCR |
+| `container-image-build.yml` | Runner mapping contract | Nine default, native, self-hosted, malformed, duplicate and incomplete mapping cases |
 | `helm-chart-package.yml` | Chart that owns an image value | Image rewriting, packaging and `ct lint`; never pushed |
 | `app-build-rust.yml` | Cargo binary with a unit test | `working-directory`, toolchain setup, fmt, Clippy, build and tests |
 | `app-build-python.yml` | Locked uv package | Lockfile check, Ruff, mypy, pytest and `uv build` |
