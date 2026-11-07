@@ -1,5 +1,4 @@
 name: _container-image-build
-#Note: this uses buildx for multiarchitecture builds, maybe make an opt-out for this in the future?
 
 on:
   workflow_call:
@@ -40,6 +39,14 @@ on:
         type: string
         description: Specify the target platform for the build output, e.g. linux/amd64,linux/arm64,linux/arm/v7
         default: linux/amd64,linux/arm64,linux/arm/v7
+      platform-runners:
+        type: string
+        description: JSON platform/runner mappings for parallel native builds e.g. [{"platform":"linux/arm64","runner":"ubuntu-26.04-arm"}]
+        default: ''
+      artifact-name:
+        type: string
+        description: Unique artifact prefix for this workflow call e.g. container-aot
+        default: container-image
       args:
         type: string
         description: Used to pass optional build arguments.
@@ -92,9 +99,49 @@ on:
 permissions: {}
 
 jobs:
-  container-image-build:
+  prepare:
     runs-on: ${{ inputs.runs-on }}
-    if: github.actor != 'dependabot[bot]'
+    permissions:
+      contents: read
+    outputs:
+      matrix: ${{ steps.matrix.outputs.matrix }}
+    steps:
+      - name: validate platform runner mapping
+        id: matrix
+        env:
+          PLATFORM: ${{ inputs.platform }}
+          PLATFORM_RUNNERS: ${{ inputs.platform-runners }}
+          DEFAULT_RUNNER: ${{ inputs.runs-on }}
+          ARTIFACT_NAME: ${{ inputs.artifact-name }}
+        run: |
+          set -euo pipefail
+          [[ "$ARTIFACT_NAME" =~ ^[A-Za-z0-9._-]+$ ]]
+          [[ "$PLATFORM" =~ ^[a-z0-9/._-]+(,[a-z0-9/._-]+)*$ ]]
+          if [[ -z "$PLATFORM_RUNNERS" ]]; then
+            MATRIX=$(jq -cn --arg platform "$PLATFORM" --arg runner "$DEFAULT_RUNNER" \
+              '{include: [{platform: $platform, runner: $runner, key: "single"}]}')
+          else
+            MATRIX=$(jq -ce --arg platforms "$PLATFORM" '
+              if type != "array" or length == 0 then error("Expected a non-empty platform/runner array") else . end |
+              if all(.[];
+                (.platform | type == "string" and test("^linux/(amd64|arm64|arm/v7)$")) and
+                (.runner | (type == "string" and length > 0) or
+                  (type == "array" and length > 0 and all(.[]; type == "string" and length > 0))))
+              then . else error("Invalid platform or runner") end |
+              if ([.[].platform] | sort) == ($platforms | split(",") | sort) and
+                ([.[].platform] | unique | length) == length
+              then . else error("Runner mapping must cover each requested platform exactly once") end |
+              {include: map(. + {key: (.platform | gsub("/"; "-"))})}
+            ' <<< "$PLATFORM_RUNNERS")
+          fi
+          echo "matrix=$MATRIX" >> "$GITHUB_OUTPUT"
+
+  container-image-build:
+    needs: prepare
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.prepare.outputs.matrix) }}
+    runs-on: ${{ matrix.runner }}
     permissions:
       contents: read
       packages: write
@@ -108,18 +155,38 @@ jobs:
       IN_DEFAULT_BRANCH_TAG: ${{ inputs.default-branch-tag }}
       IN_FEATURE_BRANCH_TAG: ${{ inputs.feature-branch-tag }}
       DOCKERFILE: ${{ inputs.dockerfile }}
-      PLATFORM: ${{ inputs.platform }}
+      PLATFORM: ${{ matrix.platform }}
       BUILD_ARGS: ${{ inputs.args }}
       DEFAULT_BRANCH: ${{ inputs.default-branch }}
-      PUSH_IMAGE: ${{ inputs.push-image }}
+      PUSH_IMAGE: ${{ inputs.push-image && github.actor != 'dependabot[bot]' }}
       ATTESTATIONS: ${{ inputs.attestations }}
       SMOKE_TEST: ${{ inputs.smoke-test }}
-      SMOKE_TEST_PLATFORM: ${{ inputs.smoke-test-platform }}
+      SMOKE_TEST_PLATFORM: ${{ inputs.platform-runners != '' && matrix.platform || inputs.smoke-test-platform }}
       BUILDKIT_CACHE: ${{ inputs.buildkit-cache }}
+      NATIVE_BUILD: ${{ inputs.platform-runners != '' }}
+      PLATFORM_KEY: ${{ matrix.key }}
     steps:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
+
+      - name: verify native Docker platform (${{ matrix.platform }})
+        if: inputs.platform-runners != ''
+        run: |
+          set -euo pipefail
+          HOST_PLATFORM=$(docker version --format '{{.Server.Os}}/{{.Server.Arch}}')
+          case "$HOST_PLATFORM" in
+            linux/arm) HOST_PLATFORM=linux/arm/v7 ;;
+          esac
+          if [[ "$HOST_PLATFORM" != "$PLATFORM" ]]; then
+            echo "::error::Docker platform $HOST_PLATFORM does not match native target $PLATFORM"
+            exit 1
+          fi
+
+      - uses: docker/setup-qemu-action@v4
+        if: inputs.platform-runners == '' && (contains(inputs.platform, ',') || inputs.platform != 'linux/amd64' || inputs.smoke-test-platform != 'linux/amd64' || runner.arch != 'X64')
+
+      - uses: docker/setup-buildx-action@v4
 
       - name: clone extra repositories
         if: inputs.extra-repos != '[]'
@@ -176,6 +243,7 @@ jobs:
           } >> "$GITHUB_ENV"
 
       - name: docker login
+        if: inputs.push-image && github.actor != 'dependabot[bot]'
         env:
           REGISTRY_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: docker login "$REGISTRY" -u "$GITHUB_ACTOR" --password-stdin <<< "$REGISTRY_TOKEN"
@@ -189,7 +257,8 @@ jobs:
           BUILDX_NO_DEFAULT_ATTESTATIONS: 1 #Note: fixes publishing container architecture 'unknown/unknown'
         run: |
           set -euo pipefail
-          docker buildx create --name multiarchtest --use
+          TAG="${TAG:?}"
+          ARTIFACT_DIRECTORY="$RUNNER_TEMP/container-image"
 
           #every build shares these, and the smoke test image must match what is published
           build() {
@@ -219,8 +288,10 @@ jobs:
           CACHE_FROM=()
           CACHE_TO=()
           if [[ "$BUILDKIT_CACHE" == "true" ]]; then
-            CACHE_FROM=(--cache-from "type=gha,scope=$REPOSITORY")
-            CACHE_TO=(--cache-to "type=gha,mode=max,scope=$REPOSITORY")
+            CACHE_SCOPE="$REPOSITORY"
+            if [[ "$NATIVE_BUILD" == "true" ]]; then CACHE_SCOPE+="-$PLATFORM_KEY"; fi
+            CACHE_FROM=(--cache-from "type=gha,scope=$CACHE_SCOPE")
+            CACHE_TO=(--cache-to "type=gha,mode=max,scope=$CACHE_SCOPE")
           fi
 
           PUSH_ARGS=()
@@ -254,5 +325,142 @@ jobs:
             echo "::endgroup::"
           fi
 
-          #reuses the builder above, so the smoke test platform is already cached rather than rebuilt
-          build "${TAGS[@]}" --platform "$PLATFORM" "${CACHE_FROM[@]}" "${CACHE_TO[@]}" "${ARGS[@]}" "${PUSH_ARGS[@]}"
+          if [[ "$NATIVE_BUILD" == "true" ]]; then
+            mkdir -p "$ARTIFACT_DIRECTORY"
+            if [[ "$PUSH_IMAGE" == "true" ]]; then
+              OUTPUT=(--output "type=image,name=$REGISTRY/$REPOSITORY,push-by-digest=true,name-canonical=true,push=true")
+              if [[ "$ATTESTATIONS" == "true" ]]; then OUTPUT+=(--provenance=mode=max --sbom=true); fi
+            else
+              OUTPUT=(--tag "$REGISTRY/$REPOSITORY:fixture-$PLATFORM_KEY" \
+                --output "type=docker,dest=$ARTIFACT_DIRECTORY/$PLATFORM_KEY.tar")
+            fi
+            build --platform "$PLATFORM" "${CACHE_FROM[@]}" "${CACHE_TO[@]}" "${ARGS[@]}" \
+              "${OUTPUT[@]}" --metadata-file "$ARTIFACT_DIRECTORY/metadata.json"
+            jq -ce --arg platform "$PLATFORM" \
+              '{platform: $platform, digest: .["containerimage.digest"]} |
+                if .digest | type == "string" and test("^sha256:[0-9a-f]{64}$")
+                then . else error("Build did not return an image digest") end' \
+              "$ARTIFACT_DIRECTORY/metadata.json" > "$ARTIFACT_DIRECTORY/$PLATFORM_KEY.json"
+            rm "$ARTIFACT_DIRECTORY/metadata.json"
+          else
+            build "${TAGS[@]}" --platform "$PLATFORM" "${CACHE_FROM[@]}" "${CACHE_TO[@]}" "${ARGS[@]}" "${PUSH_ARGS[@]}"
+          fi
+
+      - uses: actions/upload-artifact@v7
+        if: inputs.platform-runners != ''
+        with:
+          name: ${{ inputs.artifact-name }}-${{ matrix.key }}
+          path: ${{ runner.temp }}/container-image/*
+          if-no-files-found: error
+          retention-days: 1
+
+  container-image-finalize:
+    needs: [prepare, container-image-build]
+    if: inputs.platform-runners != ''
+    runs-on: ${{ inputs.runs-on }}
+    permissions:
+      contents: read
+      packages: write
+    env:
+      REGISTRY: ${{ inputs.registry }}
+      REPOSITORY: ${{ inputs.repository }}
+      REPOSITORY_PREFIX: ${{ inputs.repository-prefix }}
+      TAG: ${{ inputs.tag }}
+      ALIAS_TAG: ${{ github.ref == inputs.default-branch && inputs.default-branch-tag || inputs.feature-branch-tag }}
+      PLATFORM: ${{ inputs.platform }}
+      PUSH_IMAGE: ${{ inputs.push-image && github.actor != 'dependabot[bot]' }}
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: ${{ inputs.artifact-name }}-linux-*
+          path: ${{ runner.temp }}/container-image
+          merge-multiple: true
+
+      - name: docker login
+        if: inputs.push-image && github.actor != 'dependabot[bot]'
+        env:
+          REGISTRY_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: docker login "${REGISTRY,,}" -u "$GITHUB_ACTOR" --password-stdin <<< "$REGISTRY_TOKEN"
+
+      - name: assemble and verify multi-platform image
+        run: |
+          set -euo pipefail
+          ARTIFACT_DIRECTORY="$RUNNER_TEMP/container-image"
+          shopt -s nullglob
+          if [[ -z "$REPOSITORY" ]]; then REPOSITORY="${GITHUB_REPOSITORY#"$GITHUB_REPOSITORY_OWNER"/}"; fi
+          IMAGE="${REGISTRY,,}/${REPOSITORY_PREFIX,,}${REPOSITORY,,}"
+          TAG="${TAG,,}"
+          ALIAS_TAG="${ALIAS_TAG,,}"
+          RECORDS=("$ARTIFACT_DIRECTORY"/linux-*.json)
+          test "${#RECORDS[@]}" -gt 0
+          jq -se --arg platforms "$PLATFORM" '
+            ([.[].platform] | sort) == ($platforms | split(",") | sort) and
+            all(.[]; .digest | type == "string" and test("^sha256:[0-9a-f]{64}$"))
+          ' "${RECORDS[@]}" > /dev/null
+          if [[ "$PUSH_IMAGE" != "true" ]]; then
+            REGISTRY_CONTAINER="container-image-registry-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+            trap 'docker rm -f "$REGISTRY_CONTAINER" > /dev/null' EXIT
+            docker run --detach --name "$REGISTRY_CONTAINER" --publish 127.0.0.1:5000:5000 registry:3
+            for archive in "$ARTIFACT_DIRECTORY"/*.tar; do docker load --input "$archive"; done
+            SOURCE_IMAGE="$IMAGE"
+            IMAGE=localhost:5000/container-fixture
+          fi
+          SOURCES=()
+          for record in "${RECORDS[@]}"; do
+            TARGET=$(jq -r .platform "$record")
+            KEY="${TARGET//\//-}"
+            if [[ "$PUSH_IMAGE" == "true" ]]; then
+              DIGEST=$(jq -r .digest "$record")
+            else
+              docker tag "$SOURCE_IMAGE:fixture-$KEY" "$IMAGE:$KEY"
+              docker push "$IMAGE:$KEY"
+              DIGEST=$(docker image inspect "$IMAGE:$KEY" --format '{{json .RepoDigests}}' |
+                jq -er --arg prefix "$IMAGE@" 'first(.[] | select(startswith($prefix)) | split("@")[1])')
+            fi
+            SOURCES+=("$IMAGE@$DIGEST")
+          done
+          docker buildx imagetools create --dry-run "${SOURCES[@]}" > "$ARTIFACT_DIRECTORY/index.json"
+          jq -e --arg platforms "$PLATFORM" '
+            [.manifests[].platform | select(.os != "unknown") |
+              .os + "/" + .architecture +
+              (if .variant and (.architecture != "arm64" or .variant != "v8") then "/" + .variant else "" end)] | sort |
+            . == ($platforms | split(",") | sort)
+          ' "$ARTIFACT_DIRECTORY/index.json" > /dev/null
+          docker buildx imagetools create --tag "$IMAGE:$TAG" --tag "$IMAGE:$ALIAS_TAG" "${SOURCES[@]}"
+          docker buildx imagetools inspect "$IMAGE:$TAG" --raw > "$ARTIFACT_DIRECTORY/published-index.json"
+          jq -e --arg platforms "$PLATFORM" '
+            [.manifests[].platform | select(.os != "unknown") |
+              .os + "/" + .architecture +
+              (if .variant and (.architecture != "arm64" or .variant != "v8") then "/" + .variant else "" end)] | sort |
+            . == ($platforms | split(",") | sort)
+          ' "$ARTIFACT_DIRECTORY/published-index.json" > /dev/null
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: ${{ inputs.artifact-name }}-index
+          path: ${{ runner.temp }}/container-image/published-index.json
+          if-no-files-found: error
+          retention-days: 1
+
+  container-image-result:
+    needs: [prepare, container-image-build, container-image-finalize]
+    if: always()
+    runs-on: ${{ inputs.runs-on }}
+    permissions:
+      contents: read
+    steps:
+      - name: require every selected image job to succeed
+        env:
+          PREPARE_RESULT: ${{ needs.prepare.result }}
+          BUILD_RESULT: ${{ needs.container-image-build.result }}
+          FINALIZE_RESULT: ${{ needs.container-image-finalize.result }}
+          NATIVE_BUILD: ${{ inputs.platform-runners != '' }}
+        run: |
+          set -euo pipefail
+          test "$PREPARE_RESULT" = success
+          test "$BUILD_RESULT" = success
+          if [[ "$NATIVE_BUILD" == "true" ]]; then
+            test "$FINALIZE_RESULT" = success
+          else
+            test "$FINALIZE_RESULT" = skipped
+          fi

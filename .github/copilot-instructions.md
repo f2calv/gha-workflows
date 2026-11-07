@@ -20,4 +20,5 @@ Beyond the shared Mermaid guidance in `markdown.instructions.md`:
 
 ## README Contents
 
-- The root `README.md` must document every reusable workflow, its key inputs and its action dependency chain.
+- Keep the root `README.md` concise: identity, workflow catalogue, quick start, version selection and documentation links.
+- Link every reusable workflow to `docs/<workflow-file-stem>.md`, which owns its key inputs, permissions, prerequisites, results and action dependency diagram. Cross-workflow architecture views remain in the topic guides; never duplicate diagrams in the root README.
