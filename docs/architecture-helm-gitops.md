@@ -15,7 +15,13 @@ flowchart LR
     chart -->|Caller needs| gitops(["gitops-helm-update.yml"])
     gitops -->|Pushed desired state| manifests[("GitOps manifests")]
     manifests --> reconcile["External GitOps controller<br/>Reconcile desired state"]
+    click image href "https://github.com/f2calv/gha-workflows/blob/main/.github/workflows/container-image-build.yml" "Open image workflow" _blank
+    click chart href "https://github.com/f2calv/gha-workflows/blob/main/.github/workflows/helm-chart-package.yml" "Open chart workflow" _blank
+    click gitops href "https://github.com/f2calv/gha-workflows/blob/main/.github/workflows/gitops-helm-update.yml" "Open GitOps workflow" _blank
 ```
+
+  Workflow guides: [container image](container-image-build.md),
+  [Helm packaging](helm-chart-package.md), [GitOps update](gitops-helm-update.md).
 
 Guard publication and the GitOps call explicitly in the caller. For split native images, wait
 for the complete image workflow, including its `container-image-result` gate, before packaging
@@ -85,7 +91,10 @@ flowchart TD
     action --> update{"gitops-repo-update?"}
     update -->|No| local["Edits remain in checkout"]
     update -->|Yes| push["Commit and push updated manifests"]
+    click action href "https://github.com/f2calv/gha-gitops-manifest-update" "Open gha-gitops-manifest-update" _blank
 ```
+
+  Action repository: [gha-gitops-manifest-update](https://github.com/f2calv/gha-gitops-manifest-update).
 
 The caller supplies `GH_PAT_GITOPS`, with appropriate target-repository access. Its automatic
 `GITHUB_TOKEN` provides chart registry authentication; neither token is interchangeable merely
@@ -126,5 +135,6 @@ gitops:
 Supply the chart coordinates and any other Action-required values for the target manifest.
 Successful manifest publication is not confirmation of live reconciliation, rollout or
 application readiness. The [CI fixture callers](../.github/workflows/ci.yml) use publication-off
-Helm packaging; they do not prove a live GitOps push or deployment. Action dependencies remain
-in the [README](../README.md#_helm-chart-package).
+Helm packaging; they do not prove a live GitOps push or deployment. Action dependencies are in
+the [Helm workflow guide](helm-chart-package.md#deployment-flow) and
+[GitOps workflow guide](gitops-helm-update.md#deployment-flow).

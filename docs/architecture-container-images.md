@@ -138,26 +138,10 @@ It does not log in to GHCR or export attestations. Publication can attach attest
 enabled; verification excludes their `unknown` platform descriptors from the runnable platform
 set. Existing-tag immutability is not enforced by this workflow.
 
-## Deployment Flow
+## Action Dependencies
 
-The dependency graph shows actions used inside the workflow, distinct from the execution and
-artifact flows above. The optional clone action is maintained in this repository.
-
-```mermaid
-graph LR
-  workflow(["_container-image-build"]) --> prepare["prepare"]
-  workflow --> native["container-image-build"]
-  workflow --> finalize["container-image-finalize"]
-  workflow --> result["container-image-result"]
-  native --> checkout["actions/checkout@v7"]
-  native --> clone["clone-extra-repos@v1"]
-  native --> qemu["docker/setup-qemu-action@v4<br/>Legacy emulation"]
-  native --> buildx["docker/setup-buildx-action@v4"]
-  native --> cache["crazy-max/ghaction-github-runtime@v4<br/>Optional cache"]
-  native --> upload["actions/upload-artifact@v7"]
-  finalize --> download["actions/download-artifact@v8"]
-  finalize --> upload
-```
+The [workflow guide's dependency diagram](container-image-build.md#deployment-flow) shows the
+actions used inside the workflow, separately from these execution and artifact flows.
 
 ## Validation Boundary
 

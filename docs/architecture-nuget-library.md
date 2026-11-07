@@ -22,7 +22,14 @@ flowchart TD
     branch -->|Yes| release(["gha-release-versioning.yml<br/>Create plain X.Y.Z release"])
     gate -->|No| skipped["Release skipped"]
     branch -->|No| skipped
+    click lint href "https://github.com/f2calv/gha-workflows/blob/main/.github/workflows/lint.yml" "Open lint workflow" _blank
+    click versioning href "https://github.com/f2calv/gha-workflows/blob/main/.github/workflows/gha-release-versioning.yml" "Open versioning workflow" _blank
+    click release href "https://github.com/f2calv/gha-workflows/blob/main/.github/workflows/gha-release-versioning.yml" "Open release workflow" _blank
+    click build href "https://github.com/f2calv/gha-dotnet-nuget" "Open gha-dotnet-nuget" _blank
 ```
+
+  Dependencies: [lint](lint.md), [versioning and release](gha-release-versioning.md),
+  [gha-dotnet-nuget](https://github.com/f2calv/gha-dotnet-nuget).
 
 Package-push policy belongs to the [gha-dotnet-nuget Action](https://github.com/f2calv/gha-dotnet-nuget),
 not to the final release job. `release: false` disables tagging/releasing but does not itself
@@ -51,7 +58,7 @@ not to the package repository. Granting `id-token: write` does not repair that m
 
 For nuget.org Trusted Publishing, call the composite Action inside a local job instead. This
 excerpt assumes existing `lint` and `versioning` jobs; the
-[README usage pattern](../README.md#usage) shows calculation-only versioning. The build below
+[README quick start](../README.md#quick-start) shows calculation-only versioning. The build below
 deliberately waits for lint before publication.
 
 ```yaml
@@ -83,5 +90,5 @@ implementation.
 The [CI fixture caller](../.github/workflows/ci.yml) exercises the reusable workflow with
 `release: false`. It verifies composition and credential-free build/test behavior, not a
 successful nuget.org OIDC exchange or production package publication. The
-[README dependency graph](../README.md#_dotnet-nuget-library) identifies the actions and nested
+[workflow dependency graph](dotnet-nuget-library.md#deployment-flow) identifies the actions and nested
 workflows used by this execution path.
