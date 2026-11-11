@@ -20,6 +20,15 @@ on:
         type: boolean
         description: Sign and upload to Google Play.
         default: false
+      #Signs with the mapped keystore without deploying, e.g. a sideload APK; deploy always signs.
+      sign:
+        type: boolean
+        description: Sign with the mapped keystore without deploying.
+        default: false
+      package-format:
+        type: string
+        description: aab for Google Play or apk for sideloading.
+        default: aab
       dotnet-version:
         type: string
         description: .NET SDK version e.g. 10.0.x
@@ -50,7 +59,21 @@ on:
         type: string
         description: Android versionCode e.g. github.run_number
         default: '1'
-    #Required only when deploy is true.
+      #Matches local sideload builds that use the same scheme, so either installs over the other in place.
+      version-code-from-clock:
+        type: boolean
+        description: Use the minutes since 2025-01-01 UTC as the versionCode instead of app-version-code.
+        default: false
+      #Empty uploads nothing.
+      artifact-name:
+        type: string
+        description: Artifact name for the signed package e.g. MyApp-android-apk
+        default: ''
+      retention-days:
+        type: number
+        description: Artifact retention in days e.g. 14
+        default: 14
+    #Required when deploy or sign is true; GOOGLE_PLAY_SERVICE_ACCOUNT_JSON only when deploy is true.
     secrets:
       ANDROID_KEYSTORE_BASE64:
         required: false
@@ -77,26 +100,52 @@ jobs:
       TARGET_FRAMEWORK: ${{ inputs.target-framework }}
       CONFIGURATION: ${{ inputs.configuration }}
       DEPLOY: ${{ inputs.deploy }}
+      SIGN: ${{ inputs.deploy || inputs.sign }}
+      PACKAGE_FORMAT: ${{ inputs.package-format }}
       PACKAGE_NAME: ${{ inputs.package-name }}
       PLAY_TRACK: ${{ inputs.play-track }}
       APP_DISPLAY_VERSION: ${{ inputs.app-display-version }}
       APP_VERSION_CODE: ${{ inputs.app-version-code }}
+      VERSION_CODE_FROM_CLOCK: ${{ inputs.version-code-from-clock }}
+      ARTIFACT_NAME: ${{ inputs.artifact-name }}
+      RETENTION_DAYS: ${{ inputs.retention-days }}
       PUBLISH_DIR: ${{ github.workspace }}/artifacts/maui-android
     steps:
       - name: validate inputs
+        env:
+          HAS_KEYSTORE: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' }}
         run: |
           set -euo pipefail
           fail() { echo "::error::$1"; exit 1; }
           [[ "$APP_DISPLAY_VERSION" =~ ^[0-9]+(\.[0-9]+){0,3}$ ]] || fail "app-display-version '$APP_DISPLAY_VERSION' must be numeric, e.g. 1.2.3."
+          if [[ "$VERSION_CODE_FROM_CLOCK" == "true" ]]; then
+            APP_VERSION_CODE=$(( ($(date -u +%s) - $(date -u -d '2025-01-01' +%s)) / 60 ))
+            echo "APP_VERSION_CODE=$APP_VERSION_CODE" >> "$GITHUB_ENV"
+          fi
           [[ "$APP_VERSION_CODE" =~ ^[1-9][0-9]*$ ]] || fail "app-version-code '$APP_VERSION_CODE' must be a positive integer."
           [[ "$TARGET_FRAMEWORK" =~ ^net[0-9.]+-android[0-9.]*$ ]] || fail "target-framework '$TARGET_FRAMEWORK' is not an Android framework."
           case "$PLAY_TRACK" in
             internal | alpha | beta | production) ;;
             *) fail "play-track must be internal, alpha, beta or production." ;;
           esac
+          case "$PACKAGE_FORMAT" in
+            aab | apk) ;;
+            *) fail "package-format must be aab or apk." ;;
+          esac
           if [[ "$DEPLOY" == "true" && -z "$PACKAGE_NAME" ]]; then
             fail "package-name is required when deploy is true."
           fi
+          if [[ "$DEPLOY" == "true" && "$PACKAGE_FORMAT" != "aab" ]]; then
+            fail "Google Play deployment needs package-format aab."
+          fi
+          if [[ "$SIGN" == "true" && "$HAS_KEYSTORE" != "true" ]]; then
+            fail "Signing needs the ANDROID_KEYSTORE_BASE64 secret; fork and Dependabot runs receive no secrets."
+          fi
+          invalid_artifact_name='[":<>|*?\\/]'
+          if [[ "$ARTIFACT_NAME" =~ $invalid_artifact_name ]]; then
+            fail "artifact-name may not contain \", :, <, >, |, *, ?, \\ or /."
+          fi
+          (( RETENTION_DAYS >= 1 && RETENTION_DAYS <= 90 )) || fail "retention-days must be between 1 and 90."
 
       - uses: actions/checkout@v7
         with:
@@ -115,7 +164,7 @@ jobs:
         run: dotnet workload restore "$PROJECT"
 
       - name: decode keystore
-        if: inputs.deploy
+        if: inputs.deploy || inputs.sign
         env:
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
         run: printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/android.keystore"
@@ -124,19 +173,21 @@ jobs:
       #line. AndroidKeyStore=true is what makes the Android build use the custom keystore.
       - name: dotnet publish
         env:
-          AndroidKeyStore: ${{ inputs.deploy }}
-          AndroidSigningKeyStore: ${{ inputs.deploy && format('{0}/android.keystore', runner.temp) || '' }}
-          AndroidSigningKeyAlias: ${{ inputs.deploy && secrets.ANDROID_KEY_ALIAS || '' }}
-          AndroidSigningKeyPass: ${{ inputs.deploy && secrets.ANDROID_KEY_PASSWORD || '' }}
-          AndroidSigningStorePass: ${{ inputs.deploy && secrets.ANDROID_KEYSTORE_PASSWORD || '' }}
+          AndroidKeyStore: ${{ inputs.deploy || inputs.sign }}
+          AndroidSigningKeyStore: ${{ (inputs.deploy || inputs.sign) && format('{0}/android.keystore', runner.temp) || '' }}
+          AndroidSigningKeyAlias: ${{ (inputs.deploy || inputs.sign) && secrets.ANDROID_KEY_ALIAS || '' }}
+          AndroidSigningKeyPass: ${{ (inputs.deploy || inputs.sign) && secrets.ANDROID_KEY_PASSWORD || '' }}
+          AndroidSigningStorePass: ${{ (inputs.deploy || inputs.sign) && secrets.ANDROID_KEYSTORE_PASSWORD || '' }}
         run: |
           dotnet publish "$PROJECT" -f "$TARGET_FRAMEWORK" -c "$CONFIGURATION" -o "$PUBLISH_DIR" \
+            -p:AndroidPackageFormat="$PACKAGE_FORMAT" \
             -p:ApplicationDisplayVersion="$APP_DISPLAY_VERSION" -p:ApplicationVersion="$APP_VERSION_CODE" \
             -p:Version="$APP_DISPLAY_VERSION" -p:SourceRevisionId="$GITHUB_SHA" \
             -p:GitRepository="$GITHUB_REPOSITORY" -p:GitBranch="$GITHUB_REF" \
             -p:BuildWorkflow="$GITHUB_WORKFLOW" -p:BuildRunId="$GITHUB_RUN_ID" \
             -p:BuildRunNumber="$GITHUB_RUN_NUMBER"
-          find "$PUBLISH_DIR" -maxdepth 1 -name '*.aab' -printf '%f\n'
+          find "$PUBLISH_DIR" -maxdepth 1 -name "*.$PACKAGE_FORMAT" -printf '%f\n'
+          echo "versionCode $APP_VERSION_CODE"
 
       - name: upload to Google Play
         if: inputs.deploy
@@ -147,6 +198,15 @@ jobs:
           releaseFiles: ${{ github.workspace }}/artifacts/maui-android/*-Signed.aab
           track: ${{ inputs.play-track }}
 
+      #.NET for Android signs every package, with the debug key when no keystore is mapped.
+      - uses: actions/upload-artifact@v7
+        if: inputs.artifact-name != ''
+        with:
+          name: ${{ inputs.artifact-name }}
+          path: ${{ env.PUBLISH_DIR }}/*-Signed.${{ inputs.package-format }}
+          if-no-files-found: error
+          retention-days: ${{ inputs.retention-days }}
+
       - name: remove keystore
-        if: always() && inputs.deploy
+        if: always() && (inputs.deploy || inputs.sign)
         run: rm -f "$RUNNER_TEMP/android.keystore"
