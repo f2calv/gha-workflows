@@ -290,6 +290,18 @@ jobs:
     permissions:
       contents: read
 
+  #Debug-key APK with a clock version code and artifact upload; no signing secret is mapped.
+  test-maui-android-apk:
+    uses: ./.github/workflows/deploy-maui-android.yml
+    with:
+      project: tests/fixtures/maui/Fixture.Maui/Fixture.Maui.csproj
+      package-format: apk
+      version-code-from-clock: true
+      artifact-name: fixture-maui-android-apk
+      retention-days: 1
+    permissions:
+      contents: read
+
   test-maui-windows:
     uses: ./.github/workflows/build-maui-windows.yml
     with:
@@ -328,7 +340,7 @@ jobs:
 
   release:
     if: github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
-    needs: [lint, versioning, validate, test-dotnet, test-container-inputs, test-container, test-container-multiarch, test-container-aot, test-helm, test-go, test-rust, test-python, test-terraform, test-terraform-test, test-helm-lint, test-devcontainer-tool-versions, test-dotnet-nuget-library, test-ef-drift, test-maui-android, test-maui-windows, test-clone-extra-repos]
+    needs: [lint, versioning, validate, test-dotnet, test-container-inputs, test-container, test-container-multiarch, test-container-aot, test-helm, test-go, test-rust, test-python, test-terraform, test-terraform-test, test-helm-lint, test-devcontainer-tool-versions, test-dotnet-nuget-library, test-ef-drift, test-maui-android, test-maui-android-apk, test-maui-windows, test-clone-extra-repos]
     uses: ./.github/workflows/gha-release-versioning.yml
     with:
       semVer: ${{ format('{0}.{1}.{2}', needs.versioning.outputs.major, needs.versioning.outputs.minor, needs.versioning.outputs.patch) }}

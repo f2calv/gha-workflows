@@ -24,7 +24,7 @@ under review against small [fixtures](../tests/fixtures) before a release moves 
 | `readme-ref-check.yml` | Root README | Floating major reference for the workflows. |
 | `devcontainer-tool-versions` | Repository devcontainer | Helm and yq version reads without changing the file. |
 | `ef-migrations-drift.yml` | Model-less context/design-time factory | Tool restore and pending-model-changes check. |
-| `deploy-maui-android.yml` | Code-only MAUI app | Workload restore, pinned JDK and unsigned bundle; never deployed. |
+| `deploy-maui-android.yml` | Code-only MAUI app | Workload restore, pinned JDK and unsigned bundle; a debug-key APK with a clock version code and one-day artifact. Never deployed. |
 | `build-maui-windows.yml` | Same MAUI fixture | Self-contained unpackaged publish and one-day artifact upload. |
 | `clone-extra-repos` | Two public repositories | Explicit-ref/default-branch clones without persisted credentials. |
 

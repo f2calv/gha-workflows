@@ -40,7 +40,7 @@ environment resolve its environment-scoped secrets and protection rules.
 | Terraform | `contents: read`, `id-token: write`, including `validate` and `test` | Azure operations use `ARM_TENANT_ID`, `ARM_SUBSCRIPTION_ID`, `ARM_CLIENT_ID`; client-secret mode also uses `ARM_CLIENT_SECRET`. |
 | .NET NuGet library | `contents: write`, `id-token: write`, `packages: write` | Follow the [Trusted Publishing boundary](architecture-nuget-library.md#trusted-publishing). |
 | MAUI Windows | `contents: read` | No additional credentials. |
-| MAUI Android | `contents: read` | Deployment requires the five [signing/upload secrets](deploy-maui-android.md#signing-and-publication). |
+| MAUI Android | `contents: read` | Signing requires the four [keystore secrets](deploy-maui-android.md#signing-and-publication); deployment also requires the Play service account. |
 
 Publication and Terraform mutations are not universally event-gated. Native container builds
 validate Dependabot changes without publishing; GitOps and Android jobs skip Dependabot;
