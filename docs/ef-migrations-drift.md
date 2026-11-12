@@ -20,7 +20,7 @@ runs `dotnet ef migrations has-pending-model-changes` without requiring a live d
 
 Grant `contents: read`. The caller must pin `dotnet-ef` in `.config/dotnet-tools.json` and provide
 an `IDesignTimeDbContextFactory` configured with the migrations provider. The workflow installs
-the SDKs listed in its source and restores tools. It returns success/failure, not named outputs.
+.NET SDKs 10 and 11 and restores tools. It returns success/failure, not named outputs.
 
 ## Deployment Flow
 
