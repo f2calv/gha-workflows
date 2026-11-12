@@ -52,7 +52,7 @@ services before testing and tears them down afterward, including their volumes. 
 ## Permissions And Prerequisites
 
 Grant `contents: read`. Extra repository clones require actual repository read access. The
-workflow installs the SDKs listed in its source; the caller's SDK selection must be compatible.
+workflow installs .NET SDKs 10 and 11; the caller's SDK selection must be compatible.
 Compose tests additionally need Docker and the declared services on the runner.
 
 ## Deployment Flow

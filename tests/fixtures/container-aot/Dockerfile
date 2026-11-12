@@ -6,7 +6,7 @@
 # ------------------------------------------------------------------------------
 # Stage 1 of 2: build
 # ------------------------------------------------------------------------------
-FROM mcr.microsoft.com/dotnet/sdk:10.0-noble-aot AS build
+FROM mcr.microsoft.com/dotnet/sdk:11.0-resolute-aot AS build
 WORKDIR /src
 COPY tests/fixtures/dotnet/Directory.Build.props tests/fixtures/dotnet/Directory.Packages.props ./
 COPY tests/fixtures/dotnet/src/Fixture.Aot/Fixture.Aot.csproj src/Fixture.Aot/
@@ -43,7 +43,7 @@ EOF
 # ------------------------------------------------------------------------------
 # Stage 2 of 2: final
 # ------------------------------------------------------------------------------
-FROM mcr.microsoft.com/dotnet/runtime-deps:10.0-noble-chiseled AS final
+FROM mcr.microsoft.com/dotnet/runtime-deps:11.0-resolute-chiseled AS final
 WORKDIR /app
 COPY --link --from=build /out .
 ARG GIT_TAG=0.0.0
