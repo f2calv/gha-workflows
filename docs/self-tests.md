@@ -10,6 +10,7 @@ under review against small [fixtures](../tests/fixtures) before a release moves 
 | Workflow | Fixture | Exercises |
 | --- | --- | --- |
 | `app-build-dotnet.yml` | .NET library and xUnit v3 tests | Restore, build, MTP tests and coverage upload. |
+| `mkdocs-build.yml` | Ordinary `docs/` project | Strict script-free build, seven artifact checks and default-branch Pages deployment with live page/asset/search/exact-commit verification. |
 | `container-image-build.yml` | Single-platform image | Vanilla amd64 build, arguments, cache and smoke; never published. |
 | `container-image-build.yml` | Multi-architecture image | Legacy amd64/arm64/arm/v7, emulation and smoke; never published. |
 | `container-image-build.yml` | Native AOT executable | Native amd64/arm64, architecture/dynamic-code checks, archive transfer and verified index in a disposable registry; never published to GHCR. |

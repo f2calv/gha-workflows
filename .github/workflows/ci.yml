@@ -9,7 +9,7 @@ on:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions: {}
 
@@ -37,6 +37,95 @@ jobs:
 
   #Self-tests: each job calls the workflow from this commit against a fixture under tests/fixtures,
   #so a change is exercised before the floating major alias moves to it.
+  test-mkdocs:
+    uses: ./.github/workflows/mkdocs-build.yml
+    with:
+      working-directory: tests/fixtures/mkdocs
+      requirements-file: requirements.txt
+      artifact-name: fixture-mkdocs
+      retention-days: 1
+      site-url: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/
+    permissions:
+      contents: read
+
+  test-mkdocs-artifact:
+    needs: test-mkdocs
+    runs-on: ubuntu-26.04
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/download-artifact@v7
+        with:
+          name: fixture-mkdocs
+          path: fixture-mkdocs
+
+      - name: verify documentation artifact
+        run: |
+          set -euo pipefail
+          test -f fixture-mkdocs/index.html
+          test -f fixture-mkdocs/search/search_index.json
+          test -f fixture-mkdocs/guidance/guide/index.html
+          test -f fixture-mkdocs/.assets/marker.txt
+          grep -q 'Fixture documentation' fixture-mkdocs/index.html
+          grep -q 'Fixture Guidance' fixture-mkdocs/guidance/guide/index.html
+          test ! -f fixture-mkdocs/mkdocs.yml
+
+  test-mkdocs-pages:
+    if: >-
+      github.event_name == 'push' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+    needs: [lint, test-mkdocs-artifact]
+    runs-on: ubuntu-26.04
+    concurrency:
+      group: pages
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/download-artifact@v7
+        with:
+          name: fixture-mkdocs
+          path: site
+
+      - name: record deployed commit
+        run: printf '%s\n' "$GITHUB_SHA" > site/deployment-sha.txt
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: site
+          include-hidden-files: true
+
+      - uses: actions/deploy-pages@v5
+        id: deploy
+
+      - name: verify live documentation
+        env:
+          PAGE_URL: ${{ steps.deploy.outputs.page_url }}
+        run: |
+          set -euo pipefail
+          mkdir -p live
+          for path in index.html guidance/guide/index.html .assets/marker.txt search/search_index.json deployment-sha.txt; do
+            mkdir -p "live/$(dirname "$path")"
+            curl --fail --silent --show-error --retry 6 --retry-delay 10 --retry-all-errors \
+              "${PAGE_URL%/}/$path?run=$GITHUB_RUN_ID" --output "live/$path"
+          done
+          test "$(cat live/deployment-sha.txt)" = "$GITHUB_SHA"
+          grep -q 'Fixture documentation' live/index.html
+          grep -q 'Fixture Guidance' live/guidance/guide/index.html
+          grep -q 'Fixture public asset' live/.assets/marker.txt
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          index = json.loads(Path('live/search/search_index.json').read_text())
+          assert any('Fixture Guidance' in doc['title'] for doc in index['docs'])
+          PY
+
   test-dotnet:
     needs: versioning
     uses: ./.github/workflows/app-build-dotnet.yml
@@ -339,8 +428,38 @@ jobs:
           done
 
   release:
-    if: github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
-    needs: [lint, versioning, validate, test-dotnet, test-container-inputs, test-container, test-container-multiarch, test-container-aot, test-helm, test-go, test-rust, test-python, test-terraform, test-terraform-test, test-helm-lint, test-devcontainer-tool-versions, test-dotnet-nuget-library, test-ef-drift, test-maui-android, test-maui-android-apk, test-maui-windows, test-clone-extra-repos]
+    if: >-
+      always()
+      && github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+      && !contains(needs.*.result, 'failure')
+      && !contains(needs.*.result, 'cancelled')
+      && needs.lint.result == 'success'
+      && needs.versioning.result == 'success'
+      && needs.validate.result == 'success'
+      && needs.test-mkdocs.result == 'success'
+      && needs.test-mkdocs-artifact.result == 'success'
+      && needs.test-dotnet.result == 'success'
+      && needs.test-container-inputs.result == 'success'
+      && needs.test-container.result == 'success'
+      && needs.test-container-multiarch.result == 'success'
+      && needs.test-container-aot.result == 'success'
+      && needs.test-helm.result == 'success'
+      && needs.test-go.result == 'success'
+      && needs.test-rust.result == 'success'
+      && needs.test-python.result == 'success'
+      && needs.test-terraform.result == 'success'
+      && needs.test-terraform-test.result == 'success'
+      && needs.test-helm-lint.result == 'success'
+      && needs.test-devcontainer-tool-versions.result == 'success'
+      && needs.test-dotnet-nuget-library.result == 'success'
+      && needs.test-ef-drift.result == 'success'
+      && needs.test-maui-android.result == 'success'
+      && needs.test-maui-android-apk.result == 'success'
+      && needs.test-maui-windows.result == 'success'
+      && needs.test-clone-extra-repos.result == 'success'
+      && (needs.test-mkdocs-pages.result == 'success'
+          || (github.event_name != 'push' && needs.test-mkdocs-pages.result == 'skipped'))
+    needs: [lint, versioning, validate, test-mkdocs, test-mkdocs-artifact, test-mkdocs-pages, test-dotnet, test-container-inputs, test-container, test-container-multiarch, test-container-aot, test-helm, test-go, test-rust, test-python, test-terraform, test-terraform-test, test-helm-lint, test-devcontainer-tool-versions, test-dotnet-nuget-library, test-ef-drift, test-maui-android, test-maui-android-apk, test-maui-windows, test-clone-extra-repos]
     uses: ./.github/workflows/gha-release-versioning.yml
     with:
       semVer: ${{ format('{0}.{1}.{2}', needs.versioning.outputs.major, needs.versioning.outputs.minor, needs.versioning.outputs.patch) }}

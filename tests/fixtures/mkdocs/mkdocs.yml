@@ -1,0 +1,9 @@
+site_name: Fixture documentation
+site_url: https://example.com/project/
+
+exclude_docs: |
+  !.assets
+
+nav:
+  - Home: index.md
+  - Guidance: guidance/guide.md
