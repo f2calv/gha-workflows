@@ -2,11 +2,6 @@ name: ci
 
 on:
   workflow_dispatch:
-    inputs:
-      test-pages:
-        description: Deploy the public MkDocs fixture from this ref e.g. true
-        type: boolean
-        default: false
   push:
     branches: [main]
   pull_request:
@@ -77,8 +72,7 @@ jobs:
 
   test-mkdocs-pages:
     if: >-
-      (github.event_name == 'push' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch))
-      || (github.event_name == 'workflow_dispatch' && inputs.test-pages)
+      github.event_name == 'push' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
     needs: [lint, test-mkdocs-artifact]
     runs-on: ubuntu-26.04
     concurrency:

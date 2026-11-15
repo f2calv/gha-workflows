@@ -6,11 +6,6 @@ caller owns Pages settings and deployment.
 
 [Workflow catalogue](../README.md) · [Workflow source](../.github/workflows/mkdocs-build.yml)
 
-## Availability
-
-This workflow is new in the current checkout. The example becomes usable after a release moves
-`@v1` to a commit containing it. Local checks do not establish hosted deployment readiness.
-
 ## Inputs
 
 | Input | Default | Purpose |
@@ -124,7 +119,5 @@ graph LR
 
 The [self-tests](self-tests.md) exercise the current-commit workflow without staging. Default-branch
 pushes additionally deploy the synthetic fixture and verify its live pages, search and exact
-commit marker. An explicitly approved feature-branch canary uses
-`gh workflow run ci.yml --ref <feature-branch> -f test-pages=true`; ordinary dispatches and pull
-requests do not deploy. The protected Pages environment must allow the exact canary branch.
+commit marker. Manual dispatches and pull requests do not deploy.
 This publishes fixture documentation only, not application or package artifacts.
