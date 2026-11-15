@@ -1,0 +1,115 @@
+name: _mkdocs-build
+
+on:
+  workflow_call:
+    inputs:
+      runs-on:
+        description: Runner label e.g. ubuntu-26.04
+        type: string
+        default: ubuntu-26.04
+      working-directory:
+        description: Documentation project directory e.g. .
+        type: string
+        default: .
+      config-file:
+        description: MkDocs configuration relative to the project e.g. mkdocs.yml
+        type: string
+        default: mkdocs.yml
+      requirements-file:
+        description: Locked documentation requirements e.g. .config/docs-requirements.txt
+        type: string
+        default: .config/docs-requirements.txt
+      python-version:
+        description: Python version e.g. 3.13
+        type: string
+        default: '3.13'
+      prepare-script:
+        description: Optional PowerShell source preparation script e.g. .scripts/Prepare-Documentation.ps1
+        type: string
+        default: ''
+      site-directory:
+        description: Build output directory relative to the project e.g. site
+        type: string
+        default: site
+      site-url:
+        description: Optional canonical deployment URL e.g. https://example.com/project/
+        type: string
+        default: ''
+      artifact-name:
+        description: Documentation artifact name e.g. mkdocs-site
+        type: string
+        default: mkdocs-site
+      retention-days:
+        description: Artifact retention in days e.g. 7
+        type: number
+        default: 7
+    outputs:
+      artifact-name:
+        description: Artifact containing the built documentation
+        value: ${{ jobs.mkdocs-build.outputs.artifact-name }}
+
+permissions: {}
+
+jobs:
+  mkdocs-build:
+    runs-on: ${{ inputs.runs-on }}
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: ${{ inputs.working-directory }}
+    outputs:
+      artifact-name: ${{ inputs.artifact-name }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 1
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ inputs.python-version }}
+          cache: pip
+          cache-dependency-path: ${{ inputs.working-directory }}/${{ inputs.requirements-file }}
+
+      - name: python -m pip install --requirement
+        shell: bash
+        env:
+          REQUIREMENTS_FILE: ${{ inputs.requirements-file }}
+        run: python -m pip install --requirement "$REQUIREMENTS_FILE"
+
+      - name: prepare documentation sources
+        if: inputs.prepare-script != ''
+        shell: pwsh
+        env:
+          PREPARE_SCRIPT: ${{ inputs.prepare-script }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          & (Resolve-Path -LiteralPath $env:PREPARE_SCRIPT).Path
+          if ($LASTEXITCODE -ne 0) { throw 'Documentation preparation failed.' }
+
+      - name: mkdocs build --strict --clean
+        shell: bash
+        env:
+          CONFIG_FILE: ${{ inputs.config-file }}
+          SITE_DIRECTORY: ${{ inputs.site-directory }}
+          SITE_URL: ${{ inputs.site-url }}
+        run: |
+          python - <<'PY'
+          import os
+          from mkdocs.config import load_config
+          from mkdocs.commands.build import build
+
+          config = load_config(config_file=os.environ['CONFIG_FILE'],
+                               site_dir=os.environ['SITE_DIRECTORY'], strict=True)
+          if os.environ['SITE_URL']:
+              config.site_url = os.environ['SITE_URL']
+          build(config, dirty=False)
+          PY
+
+      - uses: actions/upload-artifact@v6
+        with:
+          name: ${{ inputs.artifact-name }}
+          path: ${{ inputs.working-directory }}/${{ inputs.site-directory }}
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: ${{ inputs.retention-days }}
