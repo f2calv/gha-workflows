@@ -94,7 +94,7 @@ jobs:
       - name: record deployed commit
         run: printf '%s\n' "$GITHUB_SHA" > site/deployment-sha.txt
 
-      - uses: actions/configure-pages@v5
+      - uses: actions/configure-pages@v6
 
       - uses: actions/upload-pages-artifact@v5
         with:
