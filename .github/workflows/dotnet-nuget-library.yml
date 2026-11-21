@@ -29,7 +29,7 @@ on:
         default: true
       dotnet-test-args:
         type: string
-        description: Test arguments, JSON array or plain string e.g. ["--filter-not-trait", "Category=Integration"]
+        description: Test arguments, JSON array or plain string e.g. ["--filter-not-trait", "Category=Live"]
         default: ''
       dotnet-restore-args:
         type: string
