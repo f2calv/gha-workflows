@@ -31,6 +31,7 @@ diagram. Its source link provides the complete `workflow_call` contract.
 | Validation | [Helm Lint](docs/helm-lint.md) | Chart dependency and fixture-values lint. |
 | Validation | [README Reference Check](docs/readme-ref-check.md) | Require an exact floating-major usage reference. |
 | Validation | [Lint](docs/lint.md) | Run the caller's pre-commit configuration. |
+| Validation | [SonarQube .NET](docs/sonarqube-dotnet.md) | Secretless Cloud analysis of .NET and supported fixture/configuration languages. |
 | Documentation | [MkDocs Build](docs/mkdocs-build.md) | Strict, locked documentation build; caller-owned Pages deployment. |
 
 ## Quick Start
