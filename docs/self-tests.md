@@ -10,6 +10,8 @@ under review against small [fixtures](../tests/fixtures) before a release moves 
 | Workflow | Fixture | Exercises |
 | --- | --- | --- |
 | `app-build-dotnet.yml` | .NET library and xUnit v3 tests | Restore, build, MTP tests and coverage upload. |
+| `app-build-npm.yml` | Dependency-free npm fixture | Script contract, version/base propagation and exact artifact contents. |
+| `pages-publish.yml` | The npm artifact, package-only | Static-site preparation and Pages packaging; deployment disabled. |
 | `mkdocs-build.yml` | Ordinary `docs/` project | Strict script-free build, seven artifact checks and default-branch Pages deployment with live page/asset/search/exact-commit verification. |
 | `container-image-build.yml` | Single-platform image | Vanilla amd64 build, arguments, cache and smoke; never published. |
 | `container-image-build.yml` | Multi-architecture image | Legacy amd64/arm64/arm/v7, emulation and smoke; never published. |

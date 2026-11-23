@@ -1,0 +1,13 @@
+{
+  "name": "frontend-workflow-fixture",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "format:check": "node --check fixture.mjs",
+    "lint": "node --check fixture.mjs",
+    "typecheck": "node --check fixture.mjs",
+    "test": "node --test fixture.test.mjs",
+    "build": "node fixture.mjs"
+  }
+}

@@ -16,6 +16,8 @@ diagram. Its source link provides the complete `workflow_call` contract.
 | Application | [App Build Go](docs/app-build-go.md) | Format checks, vet, staticcheck, build and race tests. |
 | Application | [App Build Python](docs/app-build-python.md) | Locked uv restore, Ruff, mypy, pytest and package build. |
 | Application | [App Build Rust](docs/app-build-rust.md) | Toolchain setup, fmt, Clippy, build and tests. |
+| Application | [App Build npm](docs/app-build-npm.md) | Locked restore, frontend checks, production build/browser tests and artifact upload. |
+| Hosting | [Pages Publishing](docs/pages-publish.md) | Package a tested static site, deploy on a default-branch push and verify live identity. |
 | Mobile | [Deploy MAUI Android](docs/deploy-maui-android.md) | Unsigned bundle, signed sideload APK artifact or signed Google Play upload. |
 | Mobile | [Build MAUI Windows](docs/build-maui-windows.md) | Unpackaged, self-contained Windows artifact. |
 | Database | [EF Migrations Drift](docs/ef-migrations-drift.md) | Detect model changes missing from migrations. |
