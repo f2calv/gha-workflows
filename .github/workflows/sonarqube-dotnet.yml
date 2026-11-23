@@ -81,7 +81,7 @@ jobs:
           fi
           cd "$PROJECT_BASE_DIRECTORY"
           targets=("$SOLUTION_NAME")
-          mapfile -t additional_targets < <(jq -r '.[]' <<< "$ADDITIONAL_PROJECTS")
+          mapfile -d '' -t additional_targets < <(jq -j '.[] | ., "\u0000"' <<< "$ADDITIONAL_PROJECTS")
           targets+=("${additional_targets[@]}")
           for target in "${targets[@]}"; do
             dotnet workload restore "$target"
