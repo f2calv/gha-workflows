@@ -9,11 +9,10 @@ duplicating scanner logic.
 
 ## Availability and Setup
 
-This workflow is **unreleased** and requires the action's **v3 release**, which is also
-prepared but not published. A feature-branch canary temporarily references the action's
-feature branch so live OIDC and fixture scanning can be tested before release. Release the
-action first, verify its `@v3` alias, restore the wrapper to `@v3` and rerun CI, then merge/release
-this workflow and migrate consumers. Never merge or release the temporary branch reference.
+This workflow uses the published action's `@v3` alias. Its feature-branch canary verified
+live OIDC, .NET and MAUI builds, coverage import, multi-language analysis and the Quality Gate
+before the action was released. Consumers can adopt the workflow once it appears in the
+shared repository's published `@v1` reference.
 
 In SonarQube Cloud:
 
@@ -35,7 +34,7 @@ verified in hosted CI before making the analysis a required merge gate. Never us
 
 ## Caller
 
-After release, add an independent job and include it in the caller's release fan-in:
+Add an independent job and include it in the caller's release fan-in:
 
 ```yaml
 sonarqube:

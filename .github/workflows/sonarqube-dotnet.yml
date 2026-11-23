@@ -92,8 +92,7 @@ jobs:
         with:
           project-key: ${{ inputs.sonar-project-key }}
 
-      #Feature-branch canary only; restore @v3 after the action's release and before merge.
-      - uses: f2calv/gha-sonarqube-dotnet@f2calv/2026-11-sonarqube-oidc
+      - uses: f2calv/gha-sonarqube-dotnet@v3
         with:
           sonar-project-key: ${{ steps.auth.outputs.project-key }}
           sonar-organization: ${{ steps.auth.outputs.organization }}

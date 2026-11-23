@@ -10,7 +10,7 @@ under review against small [fixtures](../tests/fixtures) before a release moves 
 | Workflow | Fixture | Exercises |
 | --- | --- | --- |
 | `app-build-dotnet.yml` | .NET library and xUnit v3 tests | Restore, build, MTP tests and coverage upload. |
-| `sonarqube-dotnet.yml` | Repository root, .NET and MAUI fixtures | OIDC-authenticated multi-language analysis, compiled C# test/mobile code and MTP coverage; requires Cloud setup and the v3 action release. |
+| `sonarqube-dotnet.yml` | Repository root, .NET and MAUI fixtures | OIDC-authenticated multi-language analysis, compiled C# test/mobile code and MTP coverage through the published v3 action; requires Cloud setup. |
 | `app-build-npm.yml` | Dependency-free npm fixture | Script contract, version/base propagation and exact artifact contents. |
 | `pages-publish.yml` | The npm artifact, package-only | Static-site preparation and Pages packaging; deployment disabled. |
 | `mkdocs-build.yml` | Ordinary `docs/` project | Strict script-free build, seven artifact checks and default-branch Pages deployment with live page/asset/search/exact-commit verification. |
@@ -46,5 +46,5 @@ picked up by the .NET scanner's multi-language mode; existing lint and language-
 remain authoritative for unsupported checks such as Bash semantics and Rust Clippy.
 
 The job waits for the Quality Gate and is included in the release fan-in. See the
-[SonarQube guide](sonarqube-dotnet.md) for secretless setup and action-first release ordering.
-Hosted analysis and MAUI scanner integration remain unverified until that setup and rollout.
+[SonarQube guide](sonarqube-dotnet.md) for secretless setup. Hosted feature-branch CI verified
+OIDC, .NET and MAUI scanner integration, coverage import and the Quality Gate before action release.
