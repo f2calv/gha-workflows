@@ -35,7 +35,7 @@ jobs:
           fetch-depth: 0
 
       # setup-uv does not publish a moving major-version tag.
-      - uses: astral-sh/setup-uv@v10.3.3
+      - uses: astral-sh/setup-uv@v10.4.0
         with:
           enable-cache: true
           working-directory: ${{ inputs.working-directory }}
