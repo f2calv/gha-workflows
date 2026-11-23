@@ -35,6 +35,21 @@ jobs:
     permissions:
       contents: read
 
+  sonarqube:
+    uses: ./.github/workflows/sonarqube-dotnet.yml
+    with:
+      runs-on: windows-2025
+      dotnet-version: |
+        10.0.x
+        11.0.x
+      solution-name: tests/fixtures/dotnet/Fixture.slnx
+      additional-projects: '["tests/fixtures/maui/Fixture.Maui/Fixture.Maui.csproj"]'
+      execute-tests: true
+      dotnet-test-args: '["--minimum-expected-tests", "4"]'
+    permissions:
+      contents: read
+      id-token: write
+
   #Self-tests: each job calls the workflow from this commit against a fixture under tests/fixtures,
   #so a change is exercised before the floating major alias moves to it.
   test-npm:
@@ -482,6 +497,7 @@ jobs:
       && needs.lint.result == 'success'
       && needs.versioning.result == 'success'
       && needs.validate.result == 'success'
+      && needs.sonarqube.result == 'success'
       && needs.test-npm.result == 'success'
       && needs.test-npm-artifact.result == 'success'
       && needs.test-pages-package.result == 'success'
@@ -508,7 +524,7 @@ jobs:
       && needs.test-clone-extra-repos.result == 'success'
       && (needs.test-mkdocs-pages.result == 'success'
           || (github.event_name != 'push' && needs.test-mkdocs-pages.result == 'skipped'))
-    needs: [lint, versioning, validate, test-npm, test-npm-artifact, test-pages-package, test-mkdocs, test-mkdocs-artifact, test-mkdocs-pages, test-dotnet, test-container-inputs, test-container, test-container-multiarch, test-container-aot, test-helm, test-go, test-rust, test-python, test-terraform, test-terraform-test, test-helm-lint, test-devcontainer-tool-versions, test-dotnet-nuget-library, test-ef-drift, test-maui-android, test-maui-android-apk, test-maui-windows, test-clone-extra-repos]
+    needs: [lint, versioning, validate, sonarqube, test-npm, test-npm-artifact, test-pages-package, test-mkdocs, test-mkdocs-artifact, test-mkdocs-pages, test-dotnet, test-container-inputs, test-container, test-container-multiarch, test-container-aot, test-helm, test-go, test-rust, test-python, test-terraform, test-terraform-test, test-helm-lint, test-devcontainer-tool-versions, test-dotnet-nuget-library, test-ef-drift, test-maui-android, test-maui-android-apk, test-maui-windows, test-clone-extra-repos]
     uses: ./.github/workflows/gha-release-versioning.yml
     with:
       semVer: ${{ format('{0}.{1}.{2}', needs.versioning.outputs.major, needs.versioning.outputs.minor, needs.versioning.outputs.patch) }}

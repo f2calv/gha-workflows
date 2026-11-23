@@ -1,0 +1,108 @@
+name: _sonarqube-dotnet
+
+on:
+  workflow_call:
+    inputs:
+      runs-on:
+        type: string
+        description: Runner label e.g. windows-2025 for MAUI Windows projects
+        default: ubuntu-26.04
+      dotnet-version:
+        type: string
+        description: .NET SDK versions e.g. 11.0.x
+        default: 11.0.x
+      solution-name:
+        type: string
+        description: Primary solution or project e.g. Example.slnx
+        required: true
+      additional-projects:
+        type: string
+        description: JSON array of additional build projects e.g. ["src/Mobile/Mobile.csproj"]
+        default: '[]'
+      project-base-directory:
+        type: string
+        description: Repository analysis root e.g. .
+        default: .
+      sonar-project-key:
+        type: string
+        description: Bound project key e.g. example_project; empty discovers the single bound project
+        default: ''
+      sonar-exclusions:
+        type: string
+        description: Comma-separated generated-file exclusions e.g. **/bin/**,**/obj/**
+        default: '**/bin/**,**/obj/**,**/node_modules/**,**/target/**,**/dist/**,.sonar/**,.sonarqube/**'
+      build-configuration:
+        type: string
+        description: .NET build configuration e.g. Release
+        default: Release
+      execute-tests:
+        type: boolean
+        description: Run MTP tests on the primary target and collect coverage
+        default: false
+      dotnet-test-args:
+        type: string
+        description: JSON array of test arguments e.g. ["--minimum-expected-tests", "4"]
+        default: '[]'
+      coverage-report-paths:
+        type: string
+        description: Microsoft coverage XML report paths e.g. TestResults/**/*.xml
+        default: ''
+
+permissions: {}
+
+jobs:
+  sonarqube:
+    runs-on: ${{ inputs.runs-on }}
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: ${{ inputs.dotnet-version }}
+
+      #Restore workloads before requesting the short-lived analysis token.
+      - name: dotnet workload restore
+        shell: bash
+        env:
+          SOLUTION_NAME: ${{ inputs.solution-name }}
+          ADDITIONAL_PROJECTS: ${{ inputs.additional-projects }}
+          PROJECT_BASE_DIRECTORY: ${{ inputs.project-base-directory }}
+        run: |
+          set -euo pipefail
+          if ! jq -e 'type == "array" and all(.[]; type == "string" and length > 0)' <<< "$ADDITIONAL_PROJECTS" >/dev/null; then
+            echo "::error::additional-projects must be a JSON array of non-empty project paths."
+            exit 1
+          fi
+          cd "$PROJECT_BASE_DIRECTORY"
+          targets=("$SOLUTION_NAME")
+          mapfile -t additional_targets < <(jq -r '.[]' <<< "$ADDITIONAL_PROJECTS")
+          targets+=("${additional_targets[@]}")
+          for target in "${targets[@]}"; do
+            dotnet workload restore "$target"
+          done
+
+      - uses: SonarSource/sonarqube-auth-action@v1
+        id: auth
+        with:
+          project-key: ${{ inputs.sonar-project-key }}
+
+      #Feature-branch canary only; restore @v3 after the action's release and before merge.
+      - uses: f2calv/gha-sonarqube-dotnet@f2calv/2026-11-sonarqube-oidc
+        with:
+          sonar-project-key: ${{ steps.auth.outputs.project-key }}
+          sonar-organization: ${{ steps.auth.outputs.organization }}
+          solution-name: ${{ inputs.solution-name }}
+          additional-projects: ${{ inputs.additional-projects }}
+          project-base-directory: ${{ inputs.project-base-directory }}
+          sonar-exclusions: ${{ inputs.sonar-exclusions }}
+          build-configuration: ${{ inputs.build-configuration }}
+          execute-tests: ${{ inputs.execute-tests }}
+          dotnet-test-args: ${{ inputs.dotnet-test-args }}
+          coverage-report-paths: ${{ inputs.coverage-report-paths }}
+          quality-gate-wait: 'true'
