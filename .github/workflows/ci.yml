@@ -37,6 +37,52 @@ jobs:
 
   #Self-tests: each job calls the workflow from this commit against a fixture under tests/fixtures,
   #so a change is exercised before the floating major alias moves to it.
+  test-npm:
+    needs: versioning
+    uses: ./.github/workflows/app-build-npm.yml
+    with:
+      version: ${{ needs.versioning.outputs.version }}
+      working-directory: tests/fixtures/npm
+      base-path: /fixture/
+      artifact-name: fixture-npm
+      retention-days: 1
+    permissions:
+      contents: read
+
+  test-npm-artifact:
+    needs: [test-npm, versioning]
+    runs-on: ubuntu-26.04
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/download-artifact@v7
+        with:
+          name: fixture-npm
+          path: fixture-npm
+
+      - name: verify frontend artifact
+        env:
+          APP_VERSION: ${{ needs.versioning.outputs.version }}
+        run: |
+          set -euo pipefail
+          test -s fixture-npm/index.html
+          jq -e --arg version "$APP_VERSION" \
+            '.version == $version and .base == "/fixture/"' fixture-npm/version.json
+          test ! -f fixture-npm/package.json
+
+  test-pages-package:
+    needs: [test-npm-artifact, versioning]
+    uses: ./.github/workflows/pages-publish.yml
+    with:
+      artifact-name: fixture-npm
+      version: ${{ needs.versioning.outputs.version }}
+      pages-artifact-name: fixture-pages
+      publish: false
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+
   test-mkdocs:
     uses: ./.github/workflows/mkdocs-build.yml
     with:
@@ -436,6 +482,9 @@ jobs:
       && needs.lint.result == 'success'
       && needs.versioning.result == 'success'
       && needs.validate.result == 'success'
+      && needs.test-npm.result == 'success'
+      && needs.test-npm-artifact.result == 'success'
+      && needs.test-pages-package.result == 'success'
       && needs.test-mkdocs.result == 'success'
       && needs.test-mkdocs-artifact.result == 'success'
       && needs.test-dotnet.result == 'success'
@@ -459,7 +508,7 @@ jobs:
       && needs.test-clone-extra-repos.result == 'success'
       && (needs.test-mkdocs-pages.result == 'success'
           || (github.event_name != 'push' && needs.test-mkdocs-pages.result == 'skipped'))
-    needs: [lint, versioning, validate, test-mkdocs, test-mkdocs-artifact, test-mkdocs-pages, test-dotnet, test-container-inputs, test-container, test-container-multiarch, test-container-aot, test-helm, test-go, test-rust, test-python, test-terraform, test-terraform-test, test-helm-lint, test-devcontainer-tool-versions, test-dotnet-nuget-library, test-ef-drift, test-maui-android, test-maui-android-apk, test-maui-windows, test-clone-extra-repos]
+    needs: [lint, versioning, validate, test-npm, test-npm-artifact, test-pages-package, test-mkdocs, test-mkdocs-artifact, test-mkdocs-pages, test-dotnet, test-container-inputs, test-container, test-container-multiarch, test-container-aot, test-helm, test-go, test-rust, test-python, test-terraform, test-terraform-test, test-helm-lint, test-devcontainer-tool-versions, test-dotnet-nuget-library, test-ef-drift, test-maui-android, test-maui-android-apk, test-maui-windows, test-clone-extra-repos]
     uses: ./.github/workflows/gha-release-versioning.yml
     with:
       semVer: ${{ format('{0}.{1}.{2}', needs.versioning.outputs.major, needs.versioning.outputs.minor, needs.versioning.outputs.patch) }}

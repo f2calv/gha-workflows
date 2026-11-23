@@ -1,0 +1,104 @@
+name: _app-build-npm
+
+on:
+  workflow_call:
+    inputs:
+      runs-on:
+        description: Runner label e.g. ubuntu-26.04
+        type: string
+        default: ubuntu-26.04
+      version:
+        description: Application build version e.g. 0.1.0-rc.1
+        type: string
+        required: true
+      working-directory:
+        description: npm application directory e.g. .
+        type: string
+        default: .
+      node-version-file:
+        description: Node version file relative to the project e.g. .nvmrc
+        type: string
+        default: .nvmrc
+      base-path:
+        description: Static hosting base path e.g. /example/
+        type: string
+        default: /
+      browser-tests:
+        description: Run the project's Playwright Chromium tests
+        type: boolean
+        default: false
+      artifact-name:
+        description: Built application artifact name e.g. frontend
+        type: string
+        default: frontend
+      retention-days:
+        description: Artifact retention in days e.g. 7
+        type: number
+        default: 7
+    outputs:
+      artifact-name:
+        description: Artifact containing the production dist directory
+        value: ${{ jobs.app-build-npm.outputs.artifact-name }}
+
+permissions: {}
+
+jobs:
+  app-build-npm:
+    runs-on: ${{ inputs.runs-on }}
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: ${{ inputs.working-directory }}
+        shell: bash
+    env:
+      CI: 'true'
+      APP_VERSION: ${{ inputs.version }}
+      VITE_APP_VERSION: ${{ inputs.version }}
+      VITE_BASE_PATH: ${{ inputs.base-path }}
+    outputs:
+      artifact-name: ${{ inputs.artifact-name }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: ${{ inputs.working-directory }}/${{ inputs.node-version-file }}
+          cache: npm
+          cache-dependency-path: ${{ inputs.working-directory }}/package-lock.json
+
+      - name: npm ci
+        run: npm ci
+
+      - name: npm run format:check
+        run: npm run format:check
+
+      - name: npm run lint
+        run: npm run lint
+
+      - name: npm run typecheck
+        run: npm run typecheck
+
+      - name: npm test
+        run: npm test
+
+      - name: npm run build
+        run: npm run build
+
+      - name: npx playwright install --with-deps chromium
+        if: inputs.browser-tests
+        run: npx --no-install playwright install --with-deps chromium
+
+      - name: npm run test:browser
+        if: inputs.browser-tests
+        run: npm run test:browser
+
+      - uses: actions/upload-artifact@v6
+        with:
+          name: ${{ inputs.artifact-name }}
+          path: ${{ inputs.working-directory }}/dist
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: ${{ inputs.retention-days }}

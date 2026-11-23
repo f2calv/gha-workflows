@@ -1,0 +1,94 @@
+name: _pages-publish
+
+on:
+  workflow_call:
+    inputs:
+      runs-on:
+        description: Runner label e.g. ubuntu-26.04
+        type: string
+        default: ubuntu-26.04
+      artifact-name:
+        description: Normal Actions artifact containing the complete static site
+        type: string
+        required: true
+      version:
+        description: Application build version e.g. 0.1.0
+        type: string
+        required: true
+      publish:
+        description: Deploy a trusted default-branch push or manual run
+        type: boolean
+        default: false
+      pages-artifact-name:
+        description: Pages transfer artifact name e.g. github-pages
+        type: string
+        default: github-pages
+    outputs:
+      page-url:
+        description: URL of the deployed site
+        value: ${{ jobs.deploy.outputs.page-url }}
+
+permissions: {}
+
+jobs:
+  prepare:
+    runs-on: ${{ inputs.runs-on }}
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/download-artifact@v7
+        with:
+          name: ${{ inputs.artifact-name }}
+          path: site
+
+      - name: verify and identify the static site
+        shell: bash
+        env:
+          APP_VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          test -s site/index.html
+          jq -n --arg commit "$GITHUB_SHA" --arg version "$APP_VERSION" \
+            '{commit: $commit, version: $version}' > site/deployment.json
+
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          name: ${{ inputs.pages-artifact-name }}
+          path: site
+          include-hidden-files: true
+
+  deploy:
+    needs: prepare
+    if: inputs.publish && (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+    runs-on: ${{ inputs.runs-on }}
+    concurrency:
+      group: pages
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    outputs:
+      page-url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/deploy-pages@v5
+        id: deploy
+        with:
+          artifact_name: ${{ inputs.pages-artifact-name }}
+
+      - name: verify live deployment identity
+        shell: bash
+        env:
+          PAGE_URL: ${{ steps.deploy.outputs.page_url }}
+          APP_VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error --retry 6 --retry-delay 10 --retry-all-errors \
+            "${PAGE_URL%/}/deployment.json?run=$GITHUB_RUN_ID" --output deployment.json
+          jq -e --arg commit "$GITHUB_SHA" --arg version "$APP_VERSION" \
+            '.commit == $commit and .version == $version' deployment.json
